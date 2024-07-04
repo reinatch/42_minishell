@@ -266,7 +266,7 @@ int main() {
     sa.sa_flags = 0;
 
     sigaction(SIGINT, &sa, NULL);  // Handle Ctrl-C
-    sigaction(SIGQUIT, &sa, NULL); // Handle Ctrl-\
+    sigaction(SIGQUIT, &sa, NULL); // Handle Ctrl-\ ,
 
     char *input;
     Token *token;
