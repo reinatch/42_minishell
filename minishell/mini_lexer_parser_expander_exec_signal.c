@@ -253,8 +253,8 @@ int execute_command(Command *cmd) {
         return 0;
     } else {
         // Parent process
-        waitpid(pid, &status, 0);
-        return 1;
+		waitpid(pid, &status, 0);
+		return 1;
     }
 }
 

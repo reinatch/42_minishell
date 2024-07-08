@@ -1,0 +1,62 @@
+Pipe ( | ): both of the commands are child processes, so everything that is done in each of them doesn't pass to the "father" (eg, create an env variable)
+
+pwd: is a simple command that displays the current directory and if there is more arguments on their right displays "pwd: too many arguments"
+
+< : the input is given from the file to the command. If there are pipes, the input is delivered to the first command
+
+> : the output of the command will be delivered to the given file. If there are pipes, the output of the combination of commands will be delivered to the file
+
+>> : the same as the redirection, but instead of rewritting the file, will append the string to the file
+
+access() : confere se o caminho e ficheiro que passarmos pode ser acedido de acordo com as flags passadas (vai ser usado para, quando encontrarmos e separarmos todos os 
+		   paths possiveis dentro da variavel ambiental PATH)
+
+pipe() : cria o pipe, que na verdade vai ser um canal de ligacao entre o pai e o respetivo child e que a partir dai podemos configurar qual sera o novo fd de input de um
+		 e o novo fd de output do outro. Esta funcao recebe um int[2] em que em [0] colocara' 0 e em [1] colocara' [1]. Quando ja nao precisarmos dos fd, temos de dar close
+		 neles 
+
+fork() : clona o programa, criando um processo filho e corre os dois processos em simultaneo a partir de onde ocorreu a clonagem.
+		 O retorno do fork para o child criado e' 0.
+		 O PID que e' recebido pelo pai (que corresponde ao retorno do fork) vai ser o PID do filho.
+
+execve() : executa comandos de bash
+		   Recebe: o PATH de onde os comandos estao guardados no PC;
+				   o comando a executar;
+				   O environment onde vai ser executado o comando.
+		   Se for executado num child, mata o child e os filhos, se ele os tiver.
+		   Se for executado no pai, mata tudo.
+
+dup2() : vai alterar os fd's de escrita e de leitura (aqueles que o pipe() escreveu)
+
+exit() : recebe um int de 0-255 que corresponde a um erro especifico
+
+perror() : recebe uma string que vai ser impressa e depois disso, imprime ": <tipo de erro>"
+
+wait() : recebe um ponteiro para um inteiro que vai modificar o valor int com o respetivo numero
+		 de saida do child process;
+		 retorna o pid do child_process;
+		 espera que o child process acabe.
+
+readline() : le uma linha de texto. Pode receber uma string como parametro para imprimir antes de
+			 entrar em "modo leitura". Retorna o input dado, nao incluindo a string que imprimiu.
+			 Em principio, sera usada para imprimir o prompt e esperar uma leitura.
+
+chdir() : muda o diretorio que estou a trabalhar este processo (se calhar vou usar isto para 
+		  replicar o comando "cd"). Retorna 0 em caso de sucesso e, em caso de ter falhado
+		  retorna -1 e "seta" o erno de acordo com o erro, como, p.e., EACCESS (permissao negada)
+
+unlink() : apaga o ficheiro que e' dado de acordo com o path (unico parametro da funcao).
+		   Este path pode ser relativo ou absoluto.
+		   (em principio, esta funcao sera usada para replicar o comando rm (em principio nao e' preciso fazer))
+
+isatty() : funcao usada para determinar se um dado fd se refere a um terminal.
+		 
+Links para continuar a estudar:
+https://www.cs.purdue.edu/homes/grr/SystemsProgrammingBook/Book/Chapter5-WritingYourOwnShell.pdf
+https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
+https://github.com/Swoorup/mysh
+https://en.wikibooks.org/wiki/Guide_to_Unix/Explanations/Shell_Prompt
+https://www.ibm.com/docs/en/aix/7.2?topic=concepts-shells-terminology
+https://www.gnu.org/software/bash/manual/html_node/Shell-Builtin-Commands.html
+https://www.gnu.org/savannah-checkouts/gnu/bash/manual/
+https://ioflood.com/blog/bash-environment-variables/
