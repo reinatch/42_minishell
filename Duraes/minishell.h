@@ -6,6 +6,9 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <signal.h>
+#include <fcntl.h>
+#include "libft_printf/libft.h"
+#include <errno.h>
 
 typedef enum {
     TOKEN_WORD,
