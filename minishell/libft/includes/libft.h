@@ -6,7 +6,7 @@
 /*   By: rerodrig <rerodrig@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/04/20 13:33:54 by rerodrig          #+#    #+#             */
-/*   Updated: 2024/05/24 11:47:37 by rerodrig         ###   ########.fr       */
+/*   Updated: 2024/07/12 16:34:19 by rerodrig         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@ int			ft_isprint(int c);
 int			ft_toupper(int c);
 void		ft_strtoupper(char *str);
 int			ft_tolower(int c);
+int			ft_isspace(int c);
 
 size_t		ft_strlen(const char *s);
 size_t		ft_strlcpy(char *dst, const char *src, size_t size);

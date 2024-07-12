@@ -562,7 +562,7 @@ cat <forbidden_file
 <forbidden_file cat
 < file_does_not_exist < valid_infile_1 cat
 cat < valid_infile_1 < file_does_not_exist
-cat < valid_infile_1 < valid_infile_1 < valid_infile_1
+"cat < valid_infile_1 < valid_infile_1 < valid_infile_1"
 cat < valid_infile_1 <
 cat < valid_infile_1 < valid_infile_2
 <valid_infile_1 cat < valid_infile_2

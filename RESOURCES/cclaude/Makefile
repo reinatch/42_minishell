@@ -78,4 +78,35 @@ fclean: clean
 	@make fclean -C $(LFT_PATH)
 	make cleanleaks
 
+##@ Norm Rules
+
+norm: $(TEMP_PATH)		## Run norminette test on source files
+	@echo "$(CYA)$(_SEP)$(D)"
+	@printf "${_NORM}: $(YEL)$(SRC_PATH)$(D)\n"
+	@ls $(SRC_PATH) | wc -l > $(TEMP_PATH)/norm_ls.txt
+	@printf "$(_NORM_INFO) $$(cat $(TEMP_PATH)/norm_ls.txt)\n"
+	@printf "$(_NORM_SUCCESS) "
+	@norminette $(SRC_PATH) | grep -wc "OK" > $(TEMP_PATH)/norm.txt; \
+	if [ $$? -eq 1 ]; then \
+		echo "0" > $(TEMP_PATH)/norm.txt; \
+	fi
+	@printf "$$(cat $(TEMP_PATH)/norm.txt)\n"
+	@if ! diff -q $(TEMP_PATH)/norm_ls.txt $(TEMP_PATH)/norm.txt > /dev/null; then \
+		printf "$(_NORM_ERR) "; \
+		norminette $(SRC_PATH) | grep -v "OK"> $(TEMP_PATH)/norm_err.txt; \
+		cat $(TEMP_PATH)/norm_err.txt | grep -wc "Error:" > $(TEMP_PATH)/norm_errn.txt; \
+		printf "$$(cat $(TEMP_PATH)/norm_errn.txt)\n"; \
+		printf "$$(cat $(TEMP_PATH)/norm_err.txt)\n"; \
+	else \
+		printf "[$(YEL)Everything is OK$(D)]\n"; \
+	fi
+	@echo "$(CYA)$(_SEP)$(D)"
+
+check_ext_func: all		## Check for external functions
+	@echo "[$(YEL)Checking for external functions$(D)]"
+	@echo "$(YEL)$(_SEP)$(D)"
+	@echo "$(CYA)Reading binary$(D): $(MAG)$(NAME)$(D)"
+	nm ./$(NAME) | grep "U" | grep -v "__" | tee $(TEMP_PATH)/ext_func.txt
+	@echo "$(YEL)$(_SEP)$(D)"
+
 .PHONY: clean fclean re rebonus all bonus

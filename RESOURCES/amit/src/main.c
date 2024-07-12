@@ -3,14 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   main.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: amenses- <amenses-@student.42.fr>          +#+  +:+       +#+        */
+/*   By: rerodrig <rerodrig@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/04 19:32:46 by amitcul           #+#    #+#             */
-/*   Updated: 2023/06/08 20:43:48 by amenses-         ###   ########.fr       */
+/*   Updated: 2024/07/12 14:58:03 by rerodrig         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../../includes/minishell.h"
+#include "../includes/minishell.h"
 
 #define PROMPT "$>"
 
@@ -207,9 +207,9 @@ int	redirector(t_command *commands_list)
 
 void	print_commands_fd(t_command *cmd)
 {
-	t_command	*tmp;
+	// t_command	*tmp;
 	
-	tmp = cmd;
+	// tmp = cmd;
 	while (cmd)
 	{
 		printf("cmd: %s, ", cmd->str[0]);

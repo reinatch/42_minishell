@@ -6,7 +6,7 @@
 #    By: rerodrig <rerodrig@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/04/23 18:04:16 by rerodrig          #+#    #+#              #
-#    Updated: 2024/05/24 11:46:18 by rerodrig         ###   ########.fr        #
+#    Updated: 2024/07/12 11:53:11 by rerodrig         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -27,7 +27,7 @@ LIBFT_SRC = ft_isalpha ft_isdigit ft_isalnum ft_isascii ft_isprint ft_strlen ft_
     		ft_memcmp ft_strnstr ft_atoi ft_calloc ft_strdup ft_substr ft_strjoin ft_strtrim ft_split\
     		ft_itoa ft_strmapi ft_striteri ft_putchar_fd ft_putstr_fd ft_putendl_fd ft_putnbr_fd ft_strtoupper\
 			ft_putnstr_fd ft_lstadd_back ft_lstadd_front ft_lstclear ft_lstdelone ft_lstiter ft_lstlast ft_lstmap\
-			ft_lstnew ft_lstsize ft_atoi_base ft_perrors_exit
+			ft_lstnew ft_lstsize ft_atoi_base ft_perrors_exit ft_isspace
 
 GNL_DIR = ft_gnl/
 GNL_SRC = get_next_line get_next_line_utils

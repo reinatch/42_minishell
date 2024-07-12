@@ -13,36 +13,59 @@ char *ft_prompt()
 	return (v_return);
 }
 
+Token *new_token()
+{
+    Token *new_node;
+
+    new_node = malloc(sizeof(Token));
+    new_node->value = NULL;
+    new_node->type = TOKEN_WORD;
+    new_node->input_file = NULL;
+    new_node->output_file = NULL;
+    new_node->append = 0;
+    new_node->pipe_to_next_token = 0;
+    new_node->next = NULL;
+    return (new_node);
+
+}
+
 
 Token *parse(char *input)
 {
-    Token *list = malloc(sizeof(Token));
-    list->value = NULL;
-    list->next = NULL;
+    Token *list = NULL;
+    char **splited = ft_split(input, ' ');
+    Token **current_ptr = &list;
+    for (int j = 0; splited[j] != NULL; j++) {
+        *current_ptr = new_token();
+        (*current_ptr)->value = ft_strdup(splited[j]);
 
-    while(*input)
-    {
-        list->value = input;
-        ft_printf("%c",input);
-        ++input;
+        current_ptr = &((*current_ptr)->next);
     }
-
+    *current_ptr = NULL;
+    for (int j = 0; splited[j] != NULL; j++) {
+        free(splited[j]);
+    }
+    free(splited);
 
     return list;
 }
+
 void printLinkedList(Token *head)
 {
     Token *current = head;
+
+
     while (current != NULL)
     {
-        // Print the value of the current node
-        printf("%s ", current->value);
-        
-        // Move to the next node
+  
+        printf("%s\n", current->value);
+
         current = current->next;
     }
-    printf("\n");
+
+    // printf("\n");
 }
+
 int main(int ac, char **av, char **ev)
 {
     (void)ac;
