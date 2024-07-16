@@ -1,5 +1,3 @@
-# include "../include/minishell.h"
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +8,7 @@
 #include <string.h>
 #include <stdbool.h>
 
+# include "./libft/includes/libft.h"
 
 # include <readline/readline.h>
 # include <readline/history.h>
@@ -23,7 +22,25 @@
 
 
 // Define the token types
+typedef enum {
+    TOKEN_WORD,
+    TOKEN_REDIRECT_IN,
+    TOKEN_REDIRECT_OUT,
+    TOKEN_REDIRECT_APPEND,
+    TOKEN_PIPE,
+    TOKEN_EOF
+} TokenType;
 
+// Define the Token structure
+typedef struct Token {
+    TokenType type;
+    char *value;
+    char *input_file;
+    char *output_file;
+    int append;
+    int pipe_to_next_token;
+    struct Token *next;
+} Token;
 
 // Function to create a new token
 Token *new_token(TokenType type, char *value) {
