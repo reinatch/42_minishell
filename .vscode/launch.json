@@ -5,10 +5,51 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "lldb-mi",
+            "request": "launch",
+            "name": "Launch Program",
+            "target": "/home/rei/42_minishell/RESOURCES/4209-minishell/minishell",
+            "cwd": "${workspaceRoot}",
+            "valuesFormatting": "parseText"
+        },
+
+        {
+            "type": "by-gdb",
+            "request": "launch",
+            "name": "Launch(gdb)",
+            "program": "/home/rei/42_minishell/RESOURCES/amit/minishell",
+            "cwd": "${workspaceRoot}"
+        },
+  
+        {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/home/rei/42_minishell/RESOURCES/kuninoto/lvl_3_minishell/minishell",
+            "program": "/home/rei/42_minishell/RESOURCES/4209-minishell/minishell",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "resources",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/sgoinfre/rerodrig/rei/42_minishell/RESOURCES/kuninoto/lvl_3_minishell/minishell",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
