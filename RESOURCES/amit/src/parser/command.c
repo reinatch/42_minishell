@@ -10,6 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#include "../../includes/minishell.h"
+
 #include "../../includes/parser.h"
 
 t_command	*init_command(char **str, size_t redirs_count,

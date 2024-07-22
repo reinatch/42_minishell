@@ -37,6 +37,10 @@ int	unclosed_quotes(char *str)
 		return (1);
 }
 
+
+
+
+
 static size_t	remove_quotes_size(char	*parsed)
 {
 	size_t	i;

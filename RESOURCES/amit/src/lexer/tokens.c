@@ -9,6 +9,7 @@
 /*   Updated: 2023/06/05 21:21:25 by amitcul          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+#include "../../includes/minishell.h"
 
 #include "../../includes/lexer.h"
 
@@ -67,6 +68,28 @@ int	read_word(int start, char *str, t_lexer_token **list)
 	return (i);
 }
 
+// int	get_tokens(t_app *app)
+// {
+// 	int	i;
+// 	int	j;
+
+// 	i = 0;
+// 	while (app->input[i])
+// 	{
+// 		j = 0;
+// 		while (ft_iswhitespace(app->input[i]))
+// 			i++;
+// 		if (is_token(app->input[i]))
+// 			j = handle_token(app->input, i, &app->lexer_tokens);
+// 		else
+// 			j = read_word(i, app->input, &app->lexer_tokens);
+// 		if (j < 0)
+// 			return (0);
+// 		i += j;
+// 	}
+// 	return (1);
+// }
+
 int	get_tokens(t_app *app)
 {
 	int	i;
@@ -78,12 +101,56 @@ int	get_tokens(t_app *app)
 		j = 0;
 		while (ft_iswhitespace(app->input[i]))
 			i++;
-		if (is_token(app->input[i]))
-			j = handle_token(app->input, i, &app->lexer_tokens);
+		
+		// Check if the current character is a token
+		t_token_type token_type;
+		if (app->input[i] == '|')
+			token_type = PIPE;
+		else if (app->input[i] == '>')
+			token_type = GREAT;
+		else if (app->input[i] == '<')
+			token_type = LESS;
 		else
-			j = read_word(i, app->input, &app->lexer_tokens);
-		if (j < 0)
-			return (0);
+			token_type = 0;
+
+		// Handle token
+		if (token_type)
+		{
+			if (token_type == GREAT && app->input[i + 1] == '>')
+			{
+				if (!add_node(NULL, G_GREAT, &app->lexer_tokens))
+					return (0);
+				j = 2;
+			}
+			else if (token_type == LESS && app->input[i + 1] == '<')
+			{
+				if (!add_node(NULL, L_LESS, &app->lexer_tokens))
+					return (0);
+				j = 2;
+			}
+			else
+			{
+				if (!add_node(NULL, token_type, &app->lexer_tokens))
+					return (0);
+				j = 1;
+			}
+		}
+		else // Read word
+		{
+			int k = 0;
+			while (app->input[i + k] && !(app->input[i + k] == '|' || app->input[i + k] == '>' || app->input[i + k] == '<'))
+			{
+				k += handle_quotes(i + k, app->input, '"');
+				k += handle_quotes(i + k, app->input, '\'');
+				if (ft_iswhitespace(app->input[i + k]))
+					break ;
+				k++;
+			}
+			if (!add_node(ft_substr(app->input, i, k), 0, &app->lexer_tokens))
+				return (0);
+			j = k;
+		}
+
 		i += j;
 	}
 	return (1);

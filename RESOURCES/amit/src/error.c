@@ -12,6 +12,7 @@
 
 #include "../includes/error.h"
 #include "../includes/structs.h"
+#include "../includes/minishell.h"
 
 #include <stdio.h>
 static void reset(t_app *app)

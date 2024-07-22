@@ -46,29 +46,29 @@ size_t	get_argc(char **parsed)
 
 size_t	get_token_len(char *input_at_i)
 {
-	size_t	i;
+	size_t	x;
 	char	quotes;
 
-	i = 0;
-	if (is_onstr(OPERATORS, input_at_i[i]))
+	x = 0;
+	if (is_onstr(OPERATORS, input_at_i[x]))
 	{
-		if (input_at_i[i] == input_at_i[i + 1])
+		if (input_at_i[x] == input_at_i[x + 1])
 			return (2);
 		return (1);
 	}
-	while (input_at_i[i]
-		&& !is_spaces(input_at_i[i])
-		&& !is_onstr(OPERATORS, input_at_i[i]))
+	while (input_at_i[x]
+		&& !is_spaces(input_at_i[x])
+		&& !is_onstr(OPERATORS, input_at_i[x]))
 	{
-		if (is_onstr(QUOTES, input_at_i[i]))
+		if (is_onstr(QUOTES, input_at_i[x]))
 		{
-			quotes = input_at_i[i++];
-			while (input_at_i[i] && input_at_i[i] != quotes)
-				i += 1;
+			quotes = input_at_i[x++];
+			while (input_at_i[x] && input_at_i[x] != quotes)
+				x += 1;
 		}
-		i += 1;
+		x += 1;
 	}
-	return (i);
+	return (x);
 }
 
 size_t	get_nr_statements(char *input)

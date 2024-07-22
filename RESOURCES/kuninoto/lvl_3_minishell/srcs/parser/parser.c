@@ -18,13 +18,13 @@ char	**parse_input(char *input)
 {
 	size_t		i;
 	size_t		k;
-	char		**parsed;
+	char		**parsedo;
 	size_t		len;
 	size_t		j;
 
 	i = 0;
 	k = 0;
-	parsed = malloc((get_nr_statements(input) + 1) * sizeof(char *));
+	parsedo = malloc((get_nr_statements(input) + 1) * sizeof(char *));
 	while (input[i])
 	{
 		len = get_token_len(&input[i]);
@@ -33,14 +33,14 @@ char	**parse_input(char *input)
 			i += 1;
 			continue ;
 		}
-		parsed[k] = malloc((len + 1) * sizeof(char));
+		parsedo[k] = malloc((len + 1) * sizeof(char));
 		j = 0;
 		while (input[i] && j < len)
-			parsed[k][j++] = input[i++];
-		parsed[k++][j] = '\0';
+			parsedo[k][j++] = input[i++];
+		parsedo[k++][j] = '\0';
 	}
-	parsed[k] = NULL;
-	return (parsed);
+	parsedo[k] = NULL;
+	return (parsedo);
 }
 
 t_statement	*parser(char *input)

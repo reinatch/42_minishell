@@ -10,12 +10,14 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#include "../../includes/minishell.h"
+
 #include "../../includes/lexer.h"
 #include "../../includes/parser.h"
 
 static void	push_back(t_lexer_token **list, t_lexer_token *new)
 {
-	t_lexer_token	*curr;
+	t_lexer_token	*currentt;
 
 	if (*list == NULL)
 	{
@@ -23,11 +25,11 @@ static void	push_back(t_lexer_token **list, t_lexer_token *new)
 		*list = new;
 		return ;
 	}
-	curr = *list;
-	while (curr->next != NULL)
-		curr = curr->next;
-	curr->next = new;
-	new->prev = curr;
+	currentt = *list;
+	while (currentt->next != NULL)
+		currentt = currentt->next;
+	currentt->next = new;
+	new->prev = currentt;
 }
 
 void	add_new_redirect(t_parser *parser, t_lexer_token *token)
@@ -65,3 +67,6 @@ void	collect_redirections(t_parser *parser)
 		add_new_redirect(parser, curr);
 	collect_redirections(parser);
 }
+
+
+

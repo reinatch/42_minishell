@@ -10,6 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#include "../../includes/minishell.h"
+
 static int	find_next_quote(char *line, int start, int *count, char quote)
 {
 	int	i;

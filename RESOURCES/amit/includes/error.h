@@ -19,5 +19,9 @@ void	lexer_error(int error, t_app *app);
 int		ft_error(int error, t_app *app);
 int		parser_double_token_error(t_app *app, t_lexer_token *lexer_list,
 	t_token_type token);
+void	parser_error(int error, t_app *app, t_lexer_token *lexer_list);
+
+int	handle_pipe_errors(t_app *app, t_token_type token_type);
+
 
 #endif

@@ -11,7 +11,7 @@
 # **************************************************************************** #
 
 CC = cc
-CFLAGS = -Wall -Wextra -Werror -fsanitize=address -g
+CFLAGS = -Wall -Wextra -Werror -g
 LINK = -I./includes
 VPATH = srcs srcs/parser srcs/expander srcs/commands\
 		srcs/commands/builtins srcs/executes srcs/utils srcs/utils/linked_lists
