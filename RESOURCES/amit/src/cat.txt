@@ -1,8 +1,0 @@
-builtin
-cat.txt
-error.c
-expander
-lexer
-main.c
-parser
-utils
