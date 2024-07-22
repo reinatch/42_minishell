@@ -27,7 +27,7 @@ LIBFT_SRC = ft_isalpha ft_isdigit ft_isalnum ft_isascii ft_isprint ft_strlen ft_
     		ft_memcmp ft_strnstr ft_atoi ft_calloc ft_strdup ft_substr ft_strjoin ft_strtrim ft_split\
     		ft_itoa ft_strmapi ft_striteri ft_putchar_fd ft_putstr_fd ft_putendl_fd ft_putnbr_fd ft_strtoupper\
 			ft_putnstr_fd ft_lstadd_back ft_lstadd_front ft_lstclear ft_lstdelone ft_lstiter ft_lstlast ft_lstmap\
-			ft_lstnew ft_lstsize ft_atoi_base ft_perrors_exit ft_isspace
+			ft_lstnew ft_lstsize ft_atoi_base ft_perrors_exit ft_isspace ft_strcmp ft_strcat
 
 GNL_DIR = ft_gnl/
 GNL_SRC = get_next_line get_next_line_utils

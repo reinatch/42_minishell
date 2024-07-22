@@ -27,7 +27,7 @@ SRC 		= $(SRCDIR)minishell.c \
 OBJ			=$(notdir $(SRC:.c=.o))
 
 #compilation
-CF 			= -Wall -Wextra -Werror -g -lreadline
+CF 			= -Wall -Wextra -Werror -g 
 CC 			= cc
 CFI 		= -I$(INCLUDES)
 LEAKS 		= valgrind
@@ -45,7 +45,7 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(NAME): $(BUILD_DIR) $(OBJ) $(LIBFT)
-	$(CC) $(CF) -o $(NAME) $(OBJ) -L $(LFT_PATH) -lft
+	$(CC) $(CF) -o $(NAME) $(OBJ) -L $(LFT_PATH) -lft -lreadline
 	mv $(OBJ) build/
 
 $(OBJ): $(SRC)

@@ -1,16 +1,30 @@
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
 #include <unistd.h>
+#include <errno.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
+
+
+#include "../libft/includes/libft.h"
+#include "../libft/includes/ft_printf.h"
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <signal.h>
-#include <fcntl.h>
-#include <errno.h>
-# include "../libft/includes/libft.h"
-# include "../libft/includes/ft_printf.h"
+
+// Error handling constants
+#define ERROR_TITLE "minishell"
+#define ERROR_SYNTAX "syntax error"
+#define YES 1
+#define NO 0
+
+
 
 typedef enum {
     TOKEN_WORD,
