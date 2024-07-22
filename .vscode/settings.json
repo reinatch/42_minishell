@@ -4,6 +4,7 @@
         "*.tcc": "c",
         "compare": "c",
         "limits": "c",
-        "structs.h": "c"
+        "structs.h": "c",
+        "readline.h": "c"
     }
 }
