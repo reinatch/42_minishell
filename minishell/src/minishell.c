@@ -7,12 +7,13 @@
 int g_exit = 0;
 
 
+
 // Function to create a new token
-Token *new_token(TokenType type, char *value) {
+Token *new_token(TokenType type, char **value) {
     Token *token = (Token *)malloc(sizeof(Token));
     if (!token) return NULL;
     token->type = type;
-    token->value = value ? ft_strdup(value) : NULL;
+    token->value = value;
     token->input_file = NULL;
     token->output_file = NULL;
     token->append = 0;
@@ -27,7 +28,11 @@ void free_token_list(Token *head) {
     while (head != NULL) {
         temp = head;
         head = head->next;
-        free(temp->value);
+        if (temp->value) {
+            for (int i = 0; temp->value[i]; i++)
+                free(temp->value[i]);
+            free(temp->value);
+        }
         free(temp->input_file);
         free(temp->output_file);
         free(temp);
@@ -73,11 +78,13 @@ void print_error(char *msg, char *key, int exit_code) {
     }
     g_exit = exit_code;
 }
+
 // Tokenizer function to split the input into tokens
 Token *tokenizer(char *input) {
     Token *head = NULL, *tail = NULL;
     char **parts = ft_split(input, ' ');
-    char *command = NULL;
+    char **command = NULL;
+    int command_count = 0;
     int i = 0;
 
     while (parts[i]) {
@@ -137,14 +144,11 @@ Token *tokenizer(char *input) {
                 return NULL;
             }
         } else {
-            if (!command) {
-                command = ft_strdup(parts[i]);
-            } else {
-                size_t len = ft_strlen(command) + ft_strlen(parts[i]) + 2;
-                command = realloc(command, len);
-                ft_strcat(command, " ");
-                ft_strcat(command, parts[i]);
-            }
+            // Handle command and arguments
+            command_count++;
+            command = realloc(command, sizeof(char *) * (command_count + 1));
+            command[command_count - 1] = ft_strdup(parts[i]);
+            command[command_count] = NULL;
 
             if (command && (!parts[i + 1] || ft_strcmp(parts[i + 1], "|") == 0 || ft_strcmp(parts[i + 1], "<") == 0 || ft_strcmp(parts[i + 1], ">") == 0 || ft_strcmp(parts[i + 1], ">>") == 0)) {
                 Token *new_tok = new_token(TOKEN_WORD, command);
@@ -155,6 +159,7 @@ Token *tokenizer(char *input) {
                 }
                 tail = new_tok;
                 command = NULL;
+                command_count = 0;
             }
         }
         i++;
@@ -170,7 +175,7 @@ void parser(Token *head) {
     while (current) {
         if (current->type == TOKEN_REDIRECT_IN) {
             if (current->next && current->next->type == TOKEN_WORD) {
-                current->input_file = ft_strdup(current->next->value);
+                current->input_file = ft_strdup(current->next->value[0]);
                 Token *temp = current->next;
                 current->next = current->next->next;
                 free(temp->value);
@@ -181,7 +186,7 @@ void parser(Token *head) {
             }
         } else if (current->type == TOKEN_REDIRECT_OUT || current->type == TOKEN_REDIRECT_APPEND) {
             if (current->next && current->next->type == TOKEN_WORD) {
-                current->output_file = ft_strdup(current->next->value);
+                current->output_file = ft_strdup(current->next->value[0]);
                 current->append = (current->type == TOKEN_REDIRECT_APPEND);
                 Token *temp = current->next;
                 current->next = current->next->next;
@@ -196,9 +201,7 @@ void parser(Token *head) {
     }
 }
 
-
 // Function to check if the input is valid
-// Check if input is empty or starts/ends with redirection operators or pipes
 int is_valid_input(char *input) {
     if (ft_strlen(input) == 0 ||
         input[0] == '|' ||
@@ -242,7 +245,11 @@ void handle_commands(Token *head) {
     Token *current = head;
     while (current) {
         if (current->type == TOKEN_WORD) {
-            ft_printf("Executing command: %s\n", current->value);
+            ft_printf("Executing command: ");
+            for (int i = 0; current->value[i]; i++) {
+                ft_printf("%s ", current->value[i]);
+            }
+            ft_printf("\n");
         }
         current = current->next;
     }
@@ -275,7 +282,15 @@ void print_token_list(Token *head) {
                 ft_printf("UNKNOWN\n");
                 break;
         }
-        ft_printf("Value: %s\n", current->value ? current->value : "NULL");
+        if (current->value) {
+            ft_printf("Value: ");
+            for (int j = 0; current->value[j]; j++) {
+                ft_printf("[%s], ", current->value[j]);
+            }
+            ft_printf("\n");
+        } else {
+            ft_printf("Value: NULL\n");
+        }
         ft_printf("Input File: %s\n", current->input_file ? current->input_file : "NULL");
         ft_printf("Output File: %s\n", current->output_file ? current->output_file : "NULL");
         ft_printf("Append: %d\n", current->append);

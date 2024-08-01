@@ -1,5 +1,4 @@
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +11,6 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-
 #include "../libft/includes/libft.h"
 #include "../libft/includes/ft_printf.h"
 #include <readline/readline.h>
@@ -23,8 +21,6 @@
 #define ERROR_SYNTAX "syntax error"
 #define YES 1
 #define NO 0
-
-
 
 typedef enum {
     TOKEN_WORD,
@@ -37,13 +33,10 @@ typedef enum {
 
 typedef struct Token {
     TokenType type;
-    char *value;
-	char *input_file;
-	char *output_file;
-	int append;
-	int pipe_to_next_token;
+    char **value; 
+    char *input_file;
+    char *output_file;
+    int append;
+    int pipe_to_next_token;
     struct Token *next;
 } Token;
-
-
-
