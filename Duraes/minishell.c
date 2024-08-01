@@ -1,5 +1,6 @@
 #include "minishell.h"
 #include "libft_printf/libft.h"
+#include <stdio.h>
 
 int ft_strcmp(const char *s1, const char *s2)
 {
@@ -132,7 +133,7 @@ char *command_path(char **to_execute, char **env)
 	return NULL;
 }
 
-void child_process(char **to_execute, Token *cmds, char **env)
+void child_process(Token *cmds, char **env)
 {
 	int fd_in;
 	int fd_out;
@@ -152,7 +153,7 @@ void child_process(char **to_execute, Token *cmds, char **env)
 			fd_out = open(cmds->output_file, O_WRONLY, O_TRUNC, O_CREAT);
 		dup2(fd_out, 1);
 	}
-	execve(command_path(to_execute, env), to_execute, env);
+	execve(command_path(cmds->to_execute, env), cmds->to_execute, env);
 	if (cmds->input_file)
 		close (fd_in);
 	if (cmds->output_file)
@@ -160,13 +161,17 @@ void child_process(char **to_execute, Token *cmds, char **env)
 	exit(127);
 }
 
-void ft_cd_builtin(Token *cmds, char **to_execute)
+void ft_cd_builtin(Token *cmds)
 {
 	char *error;
 
-	if (chdir(cmds->value) == -1)
+	if (ft_strlen(cmds->to_execute[0]) != 2 || cmds->to_execute[1] == NULL)
+		write(1, "\n", 1);
+	else if (cmds->to_execute[2] != NULL)
+		printf("bash : cd: too many arguments\n");
+	else if (chdir(cmds->to_execute[1]) == -1)
 	{
-		error = ft_strjoin("minishell: cd: ", to_execute[1]);
+		error = ft_strjoin("minishell: cd: ", cmds->to_execute[1]);
 		perror(error);
 		free(error);
 	}
@@ -205,6 +210,8 @@ int is_n_flag(char **to_execute)
 	int i;
 	
 	i = 0;
+	if (!to_execute[1])
+		return 0;
 	if (to_execute[1][i++] != '-')
 		return 0;
 	while (to_execute[1][i])
@@ -224,38 +231,231 @@ void decide_in_and_out(Token *cmd, int **fds)
 	if (cmd->output_file)
 	{
 		if (cmd->append)
-			*(fds[1]) = open(cmd->output_file, O_WRONLY | O_APPEND | O_CREAT);
+			(*fds)[1] = open(cmd->output_file, O_WRONLY | O_APPEND | O_CREAT);
 		else
-			*(fds[1]) = open(cmd->output_file, O_WRONLY, O_TRUNC, O_CREAT);
+			(*fds)[1] = open(cmd->output_file, O_WRONLY | O_TRUNC | O_CREAT);
 	}
 }
 
-void ft_echo_builtin(Token *cmd, char **to_execute) 
+int roam_while_isnt_assigned_char(char *str, char c)
 {
 	int i;
-	int flag;
-	int *fds;
-	int j;
 
-	flag = 0;
-	i = 1;
-	if (to_execute[i++] && is_n_flag(to_execute))
-		flag = 1;
-	decide_in_and_out(cmd, &fds);
-	if (fds[0] != 0)
+	i = 0;
+	while (str[i] != '\0' && str[i] != c)
+		i++;
+	if (str[i] == '\0')
+		return -1;
+	return i;
+}
+
+// int is_even_quotes(char *str)
+// {
+// 	int i;
+// 	int how_far_went;
+// 	int words;
+//
+// 	i = 0;
+// 	words = 1;
+// 	while (str[i] != '\0')
+// 	{
+// 		how_far_went = 0;
+// 		if (str[i] == '\"' || str[i] == '\'')
+// 		{
+// 			if (str[i] == '\"')
+// 				how_far_went += roam_while_isnt_assigned_char(++i + str, '\"');
+// 			else if (str[i] == '\'')
+// 				how_far_went += roam_while_isnt_assigned_char(++i + str, '\'');
+// 			if (how_far_went == -1)
+// 				return 0;
+// 			words++;
+// 			i += how_far_went;
+// 		}
+// 		i++;
+// 	}
+// 	return words;
+// }
+
+int fulfil_word(char *str, char **to_execute, char c)
+{
+	int word_len;
+	int i;
+
+	word_len = 0;
+	while (str[word_len] != '\0' && str[word_len] != c)
+		word_len++;
+	(*to_execute) = malloc(sizeof(char) * (word_len + 1));
+	(*to_execute)[word_len] = '\0';
+	i = 0;
+	while (i < word_len)
 	{
-		if (!flag)
-			write(1, "\n", 1);
-		return ;
-	}
-	while (to_execute[i])
-	{
-		j = 0;
-		while (to_execute[i][j])
-			write(fds[1], &(to_execute[i][j++]), 1);
+		(*to_execute)[i] = str[i];
 		i++;
 	}
+	return i + 1;
+}
+
+void separate_by_quote(char *str, int *i, char **ret, char c, int *j)
+{
+	int i_cpy;
+	int k;
+
+	(*i)++;
+	i_cpy = (*i);
+	k = 0;
+	while (str[i_cpy] != c)
+	{
+		printf("string na posicao %d tem caractere %c\n", i_cpy, str[i_cpy]);
+		i_cpy++;
+	}
+	(*ret) = malloc(sizeof(char) * (i_cpy - (*i) + 1));
+	(*ret)[i_cpy - (*i)] = '\0';
+	while (str[(*i)] != '\0' && str[(*i)] != c)
+	{
+		(*ret)[k] = str[(*i)];
+		k++;
+		(*i)++;
+	}
+	if (str[(*i)] != '\0')
+		(*i)++;
+	(*j)++;
+}
+
+void separate_by_space(char *str, int *i, char **ret, int *j)
+{
+	int i_cpy;
+	int counter;
+
+	if (str[*i] == '\0')
+		return ;
+	while (str[*i] == ' ')
+		(*i)++;
+	i_cpy = (*i);
+	while (str[i_cpy] != '\0' && str[i_cpy] != '\'' && str[i_cpy] != '"' && str[i_cpy] != ' ')
+		i_cpy++;
+	if (i_cpy != (*i))
+	{
+		counter = 0;
+		(*ret) = malloc(sizeof(char) * (i_cpy - (*i) + 1));
+		while  ((*i) < i_cpy)
+			(*ret)[counter++] = str[(*i)++];
+		(*j)++;
+	}
+}
+
+// void take_quote_from_beggining(char ***ret)
+// {
+// 	char *copy;
+// 	int j;
+// 	int len;
+// 	int i;
+//
+// 	j = 0;
+// 	while ((*ret)[j])
+// 	{
+// 		if ((*ret)[j][0] == '\'' || (*ret)[j][0] == '"')
+// 		{
+// 			i = 1;
+// 			len = ft_strlen((*ret)[j]);
+// 			copy = ft_strdup((*ret)[j]);
+// 			free((*ret)[j]);
+// 			(*ret)[j] = malloc(sizeof(char) * (len));
+// 			while(i <= len)
+// 				(*ret)[j][i++] = copy[j - 1];
+// 		}
+// 		j++;
+// 	}
+// }
+
+char **separate_command(char *str, int n_args)
+{
+	char **ret;
+	int i;
+	int j;
+
+	j = 0;
+	i = 0;
+	printf("O numero de argumentos e' %d\n", n_args);
+	ret = malloc(sizeof(char *) * (n_args + 1));
+	while (str[i] != '\0')
+	{
+		if (str[i] == '\'' || str[i] == '"')
+			separate_by_quote(str, &i, &(ret[j]), str[i], &j);
+		else
+			separate_by_space(str, &i, &(ret[j]), &j);
+	}
+	if (ret[n_args] != NULL)
+		free(ret[n_args]);
+	ret[n_args] = NULL;
+	// take_quote_from_beggining(&ret);
+	return (ret);
+}
+
+int where_is_last_n_flag(char **to_execute)
+{
+	int i;
+	int j;
+	int last_nflag_position;
+
+	i = 1;
+	last_nflag_position = 1;
+	while (to_execute[i] != NULL)
+	{
+		j = 0;
+		if (to_execute[i][j] == '-')
+		{
+			j++;
+			while (to_execute[i][j] == 'n')
+				j++;
+			if (to_execute[i][j] == '\0')
+				last_nflag_position = i;
+			else
+				break ;
+		}
+		i++;
+	}
+	return last_nflag_position;
+}
+
+// here, I need to free everything and close the file directorys, if needed
+void print_echo(int n_flag, char **to_execute, int *fds)
+{
+	int i;
+
+	if (n_flag)
+		i = where_is_last_n_flag(to_execute) + 1;
+	else
+		i = 1;
+	while (to_execute[i])
+	{
+		write_in_fd(to_execute[i++], fds[1]);
+		if (to_execute[i] != NULL)
+			write_in_fd(" ", fds[1]);
+	}
+	if (!n_flag)
+		write_in_fd("\n", fds[1]);
 	close_fds(fds);
+	free_a_arrays(to_execute);
+}
+
+void ft_echo_builtin(Token *cmd) 
+{
+	int *fds;
+	char *str_error;
+	int i;
+
+	i = 0;
+	fds = malloc(sizeof(int) * 2);
+	decide_in_and_out(cmd, &fds);
+	if (ft_strlen(cmd->to_execute[0]) != 4)
+	{
+		str_error = ft_strjoin(cmd->to_execute[0], ": command not found");
+		write_in_fd(str_error, fds[1]);
+		write(fds[1], "\n", 1);
+		free(str_error);
+	}
+	else
+		print_echo(is_n_flag(cmd->to_execute), cmd->to_execute, fds);
 }
 
 void ft_env_builtin(Token *cmd, char **env)
@@ -313,7 +513,7 @@ void sort_pos_of_envp(char **envp, int **pos_sorted, int len)
 		j = i + 1;
 		while (j < len)
 		{
-			if (ft_strcmp(envp[*(pos_sorted[i])], envp[*(pos_sorted[j])]) > 0)
+			if (ft_strcmp(envp[(*pos_sorted)[i]], envp[(*pos_sorted)[j]]) > 0)
 			{
 				temp = *(pos_sorted[i]);
 				*(pos_sorted[i]) = *(pos_sorted[j]);
@@ -338,7 +538,7 @@ void ft_env_sorted(char **envp, int fd)
 	n_strs = number_of_strs(envp);
 	pos_sorted = malloc(sizeof(int) * n_strs);
 	i = -1;
-	while (envp[i++])
+	while (envp[++i])
 		pos_sorted[i] = i;
 	sort_pos_of_envp(envp, &pos_sorted ,n_strs);
 	i = 0;
@@ -346,6 +546,7 @@ void ft_env_sorted(char **envp, int fd)
 	{
 		write(fd, "declare -x ", 11);
 		write_in_fd(envp[pos_sorted[i++]], fd);
+		write(fd, "\n", 1);
 	}
 	if (fd != 1)
 		close(fd);
@@ -450,29 +651,29 @@ char **ft_envp_with_new_str(char **envp, int n_strs, char **to_execute)
 // variables alphabetically sorteds.
 //
 // FALTA ME VERIFICAR SE O ENVIRONMENT JA TEM A VARIAVEL QUE QUERO COLOCAR
-char **ft_export_builtin(Token *cmd, char **to_execute, char **envp)
+char **ft_export_builtin(Token *cmd, char **envp)
 {
 	int n_strs;
 	char **new_envp;
 	int fd;
 
 	fd = 1;
+	new_envp = NULL;
 	if (cmd->output_file)
 		fd = open(cmd->output_file, O_RDONLY);
-	if (to_execute[1] == NULL)
+	if (cmd->to_execute[1] == NULL)
 		ft_env_sorted(envp, fd);
 	else
 	{
-		if (!valid_export_args(to_execute, fd))
+		if (!valid_export_args(cmd->to_execute, fd))
 			return envp;
 		n_strs = number_of_strs(envp);
-		new_envp = ft_envp_with_new_str(envp, n_strs, to_execute);
+		new_envp = ft_envp_with_new_str(envp, n_strs, cmd->to_execute);
 		free_a_arrays(envp);
-		envp = new_envp;
 	}
 	if (cmd->output_file)
 		close(fd);
-	return envp;
+	return new_envp;
 }
 
 char **ft_unset_builtin(char **to_execute, char **envp)
@@ -504,32 +705,41 @@ char **ft_unset_builtin(char **to_execute, char **envp)
 	return (new_envp);
 }
 
-void no_pipes(Token *cmds, char **envp)
+void simple_command(Token *cmds, char **envp)
 {
 	int pid;
-	char **to_execute;
-	
-	to_execute = ft_split(cmds->value, ' ');
-	if (ft_strncmp(to_execute[0], "cd", 2) == 0)
-		ft_cd_builtin(cmds, to_execute);
-	else if (ft_strncmp(to_execute[0], "pwd", 3) == 0)
+
+	pid = fork();
+	if (pid == 0)
+		child_process(cmds, envp);
+	waitpid(pid, NULL, -1);
+	free_a_arrays(cmds->to_execute);
+}
+
+void no_pipes(Token *cmds, char **envp)
+{
+	char **return_of_env;
+
+	if (ft_strncmp(cmds->to_execute[0], "cd", 2) == 0)
+		ft_cd_builtin(cmds);
+	else if (ft_strncmp(cmds->to_execute[0], "pwd", 3) == 0)
 		ft_pwd_builtin(cmds);
-	else if (ft_strncmp(to_execute[0], "export", 6) == 0)
-		envp = ft_export_builtin(cmds, to_execute, envp);
-	else if (ft_strncmp(to_execute[0], "unset", 5) == 0)
-		envp = ft_unset_builtin(to_execute, envp);
-	else if (ft_strncmp(to_execute[0], "env", 3) == 0)
-		ft_env_builtin(cmds, envp);
-	else if (ft_strncmp(to_execute[0], "echo", 4) == 0)
-		ft_echo_builtin(cmds, to_execute);
-	else
+	else if (ft_strncmp(cmds->to_execute[0], "export", 6) == 0)
 	{
-		pid = fork();
-		if (pid == 0)
-				child_process(to_execute, cmds, envp);
-		waitpid(pid, NULL, 0);
-		free_a_arrays(to_execute);
+		return_of_env = ft_export_builtin(cmds, envp);
+		envp = return_of_env;
 	}
+	else if (ft_strncmp(cmds->to_execute[0], "unset", 5) == 0)
+	{
+		return_of_env = ft_unset_builtin(cmds->to_execute, envp);
+		envp = return_of_env;
+	}
+	else if (ft_strncmp(cmds->to_execute[0], "env", 3) == 0)
+		ft_env_builtin(cmds, envp);
+	else if (ft_strncmp(cmds->to_execute[0], "echo", 4) == 0)
+		ft_echo_builtin(cmds);
+	else
+		simple_command(cmds, envp);
 }
 
 void with_pipes(Token *cmds, char **envp)
@@ -574,11 +784,29 @@ int main(int ac, char **av, char **envp)
 	my_env = ft_array_strdup(envp);
 		cmds = calloc(1, sizeof(struct Token));
 	cmds->pipe_to_next_token = 0;
-	cmds->next = NULL;
-	cmds->value = "env";
+	cmds->to_execute = malloc(sizeof(char *) * 2);
+	cmds->to_execute[0] = ft_strdup("ls");
+	// cmds->to_execute[1] = ft_strdup("-nnnnnnnnnnn");
+	// cmds->to_execute[2] = ft_strdup("-n");
+	// cmds->to_execute[3] = ft_strdup("-nnnnn-");
+	// cmds->to_execute[4] = ft_strdup("Hello World");
+	// cmds->to_execute[5] = ft_strdup("; Hello again");
+	// cmds->to_execute[6] = ft_strdup("\n\"Now, hello with double ' \"");
+	cmds->to_execute[1] = NULL;
 	cmds->append = 0;
 	cmds->input_file = NULL;
-	cmds->output_file = "teset.txt";
+	cmds->output_file = NULL;
+	cmds->next = NULL;
+	// cmds->next = calloc(1, sizeof(struct Token));
+	// cmds->next->to_execute = malloc(sizeof (char *) * 3);
+	// cmds->next->to_execute[0] = ft_strdup("grep");
+	// cmds->next->to_execute[1] = ft_strdup("Hel");
+	// cmds->next->to_execute[2] = NULL;
+	// cmds->next->output_file = NULL;
+	// cmds->next->input_file = NULL;
+	// cmds->next->append = 0;
+	// cmds->next->pipe_to_next_token = 0;
+	// cmds->next->next = NULL;
 	after_receiving_cmds(cmds, my_env);
 	free_list(cmds);
 }
