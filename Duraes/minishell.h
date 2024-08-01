@@ -19,11 +19,6 @@ typedef enum {
     TOKEN_EOF
 } TokenType;
 
-typedef struct bigStruct {
-	struct Token *cmds;
-	int error_return;
-} bigStruct;
-
 typedef struct Token {
     TokenType type;
     char **to_execute;

@@ -210,6 +210,8 @@ int is_n_flag(char **to_execute)
 	int i;
 	
 	i = 0;
+	if (!to_execute[1])
+		return 0;
 	if (to_execute[1][i++] != '-')
 		return 0;
 	while (to_execute[1][i])
@@ -436,9 +438,6 @@ void print_echo(int n_flag, char **to_execute, int *fds)
 	free_a_arrays(to_execute);
 }
 
-// preciso de tratar do caso em que tem, p.e.: echo "Hello           World"
-//												echo $USER
-//												echo '$USER'
 void ft_echo_builtin(Token *cmd) 
 {
 	int *fds;
@@ -776,14 +775,29 @@ int main(int ac, char **av, char **envp)
 	my_env = ft_array_strdup(envp);
 		cmds = calloc(1, sizeof(struct Token));
 	cmds->pipe_to_next_token = 0;
-	cmds->next = NULL;
-	cmds->to_execute = malloc(sizeof(char *) * 3);
-	cmds->to_execute[0] = ft_strdup("pwd");
-	cmds->to_execute[1] = ft_strdup("Hello World");
-	cmds->to_execute[2] = NULL;
-	cmds->append = 1;
+	cmds->to_execute = malloc(sizeof(char *) * 2);
+	cmds->to_execute[0] = ft_strdup("echo");
+	// cmds->to_execute[1] = ft_strdup("-nnnnnnnnnnn");
+	// cmds->to_execute[2] = ft_strdup("-n");
+	// cmds->to_execute[3] = ft_strdup("-nnnnn-");
+	// cmds->to_execute[4] = ft_strdup("Hello World");
+	// cmds->to_execute[5] = ft_strdup("; Hello again");
+	// cmds->to_execute[6] = ft_strdup("\n\"Now, hello with double ' \"");
+	cmds->to_execute[1] = NULL;
+	cmds->append = 0;
 	cmds->input_file = NULL;
-	cmds->output_file = "teset.txt"; 
+	cmds->output_file = NULL;
+	cmds->next = NULL;
+	// cmds->next = calloc(1, sizeof(struct Token));
+	// cmds->next->to_execute = malloc(sizeof (char *) * 3);
+	// cmds->next->to_execute[0] = ft_strdup("grep");
+	// cmds->next->to_execute[1] = ft_strdup("Hel");
+	// cmds->next->to_execute[2] = NULL;
+	// cmds->next->output_file = NULL;
+	// cmds->next->input_file = NULL;
+	// cmds->next->append = 0;
+	// cmds->next->pipe_to_next_token = 0;
+	// cmds->next->next = NULL;
 	after_receiving_cmds(cmds, my_env);
 	free_list(cmds);
 }
