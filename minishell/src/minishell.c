@@ -12,8 +12,37 @@ int g_exit = 0;
 Token *new_token(TokenType type, char **value) {
     Token *token = (Token *)malloc(sizeof(Token));
     if (!token) return NULL;
+
     token->type = type;
-    token->value = value;
+
+    // Calculate the size of the value array
+    size_t count = 0;
+    while (value[count]) {
+        count++;
+    }
+
+    // Allocate memory for to_execute array
+    token->to_execute = (char **)malloc((count + 1) * sizeof(char *));
+    if (!token->to_execute) {
+        free(token);
+        return NULL;
+    }
+
+    // Copy each string into the to_execute array
+    for (size_t i = 0; i < count; i++) {
+        token->to_execute[i] = ft_strdup(value[i]);
+        if (!token->to_execute[i]) {
+            // Free previously allocated memory if strdup fails
+            while (i > 0) {
+                free(token->to_execute[--i]);
+            }
+            free(token->to_execute);
+            free(token);
+            return NULL;
+        }
+    }
+    token->to_execute[count] = NULL; // Null-terminate the array
+
     token->input_file = NULL;
     token->output_file = NULL;
     token->append = 0;
@@ -22,25 +51,40 @@ Token *new_token(TokenType type, char **value) {
     return token;
 }
 
+
 // Function to free the token list
 void free_token_list(Token *head) {
     Token *temp;
     while (head != NULL) {
         temp = head;
         head = head->next;
-        if (temp->value) {
-            for (int i = 0; temp->value[i]; i++)
-                free(temp->value[i]);
-            free(temp->value);
+
+        // Free each string in the to_execute array
+        if (temp->to_execute) {
+            int i = 0;
+            while (temp->to_execute[i]) {
+                free(temp->to_execute[i]);
+                i++;
+            }
+            free(temp->to_execute);
         }
-        free(temp->input_file);
-        free(temp->output_file);
+
+        // Free other dynamically allocated strings
+        if (temp->input_file) {
+            free(temp->input_file);
+        }
+        if (temp->output_file) {
+            free(temp->output_file);
+        }
+
+        // Free the Token struct itself
         free(temp);
     }
 }
 
 // Function to find the next quote in the string
-static int find_next_quote(char *line, int start, int *count, char quote) {
+int find_next_quote(char *line, int start, int *count, char quote)
+{
     int i = start + 1;
     *count += 1;
     while (line[i] && line[i] != quote)
@@ -51,7 +95,8 @@ static int find_next_quote(char *line, int start, int *count, char quote) {
 }
 
 // Function to check for balanced quotes
-int check_quotes(char *line) {
+int check_quotes(char *line)
+{
     int i = 0;
     int double_quote_count = 0;
     int single_quote_count = 0;
@@ -67,7 +112,8 @@ int check_quotes(char *line) {
 }
 
 // Function to print error messages
-void print_error(char *msg, char *key, int exit_code) {
+void print_error(char *msg, char *key, int exit_code)
+{
     if (key) {
         if (msg)
             ft_printf("%s: %s: %s\n", ERROR_TITLE, key, msg);
@@ -80,7 +126,8 @@ void print_error(char *msg, char *key, int exit_code) {
 }
 
 // Tokenizer function to split the input into tokens
-Token *tokenizer(char *input) {
+Token *tokenizer(char *input)
+{
     Token *head = NULL, *tail = NULL;
     char **parts = ft_split(input, ' ');
     char **command = NULL;
@@ -170,15 +217,16 @@ Token *tokenizer(char *input) {
 }
 
 // Parser function to set redirection files
-void parser(Token *head) {
+void parser(Token *head)
+{
     Token *current = head;
     while (current) {
         if (current->type == TOKEN_REDIRECT_IN) {
             if (current->next && current->next->type == TOKEN_WORD) {
-                current->input_file = ft_strdup(current->next->value[0]);
+                current->input_file = ft_strdup(current->next->to_execute[0]);
                 Token *temp = current->next;
                 current->next = current->next->next;
-                free(temp->value);
+                free(temp->to_execute);
                 free(temp);
             } else {
                 print_error("Redirection '<' must be followed by a filename", NULL, 1);
@@ -186,11 +234,11 @@ void parser(Token *head) {
             }
         } else if (current->type == TOKEN_REDIRECT_OUT || current->type == TOKEN_REDIRECT_APPEND) {
             if (current->next && current->next->type == TOKEN_WORD) {
-                current->output_file = ft_strdup(current->next->value[0]);
+                current->output_file = ft_strdup(current->next->to_execute[0]);
                 current->append = (current->type == TOKEN_REDIRECT_APPEND);
                 Token *temp = current->next;
                 current->next = current->next->next;
-                free(temp->value);
+                free(temp->to_execute);
                 free(temp);
             } else {
                 print_error("Redirection '>' or '>>' must be followed by a filename", NULL, 1);
@@ -202,7 +250,8 @@ void parser(Token *head) {
 }
 
 // Function to check if the input is valid
-int is_valid_input(char *input) {
+int is_valid_input(char *input)
+{
     if (ft_strlen(input) == 0 ||
         input[0] == '|' ||
         input[ft_strlen(input) - 1] == '|' ||
@@ -214,7 +263,8 @@ int is_valid_input(char *input) {
 }
 
 // Function to check if the input contains only spaces
-int have_only_spaces(char *input) {
+int have_only_spaces(char *input)
+{
     while (*input) {
         if (!isspace(*input)) {
             return 0;
@@ -225,7 +275,8 @@ int have_only_spaces(char *input) {
 }
 
 // Function to check redirections validity
-int check_redirections(Token *head) {
+int check_redirections(Token *head)
+{
     Token *current = head;
     while (current) {
         if ((current->type == TOKEN_REDIRECT_IN || 
@@ -246,8 +297,8 @@ void handle_commands(Token *head) {
     while (current) {
         if (current->type == TOKEN_WORD) {
             ft_printf("Executing command: ");
-            for (int i = 0; current->value[i]; i++) {
-                ft_printf("%s ", current->value[i]);
+            for (int i = 0; current->to_execute[i]; i++) {
+                ft_printf("%s ", current->to_execute[i]);
             }
             ft_printf("\n");
         }
@@ -282,10 +333,10 @@ void print_token_list(Token *head) {
                 ft_printf("UNKNOWN\n");
                 break;
         }
-        if (current->value) {
+        if (current->to_execute) {
             ft_printf("Value: ");
-            for (int j = 0; current->value[j]; j++) {
-                ft_printf("[%s], ", current->value[j]);
+            for (int j = 0; current->to_execute[j]; j++) {
+                ft_printf("[%s], ", current->to_execute[j]);
             }
             ft_printf("\n");
         } else {
@@ -302,7 +353,8 @@ void print_token_list(Token *head) {
 }
 
 // Function to prompt for user input
-char *ft_prompt() {
+char *ft_prompt()
+{
     char *v_return;
 
     v_return = readline("minishell>: ");
@@ -316,7 +368,8 @@ char *ft_prompt() {
 }
 
 // Function to process the input
-int process_input(char *input) {
+int process_input(char *input)
+{
     if (!input) {
         ft_printf("Exit\n");
         exit(g_exit);
@@ -338,7 +391,8 @@ int process_input(char *input) {
     return 0;
 }
 
-void sig_handler(int signum) {
+void sig_handler(int signum)
+{
     if (signum == SIGINT) {
         rl_replace_line("", 0);
         write(1, "\n", 1);
@@ -348,40 +402,73 @@ void sig_handler(int signum) {
     }
 }
 
-int main() {
-    char *input;
-    Token *cmds;
 
-    while (1) {
-        signal(SIGINT, sig_handler);
-        signal(SIGQUIT, SIG_IGN);
 
-        input = ft_prompt();
 
-        if (process_input(input))
-            continue;
 
-        cmds = tokenizer(input);
-        if (!cmds) {
-            print_error("Tokenizer failed", NULL, 1);
-            free(input);
-            continue;
-        }
 
-        parser(cmds);
 
-        if (!check_redirections(cmds)) {
-            free_token_list(cmds);
-            free(input);
-            continue;
-        }
 
-        handle_commands(cmds);
 
-        print_token_list(cmds);
-        free_token_list(cmds);
-        free(input);
-    }
 
-    return 0;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
