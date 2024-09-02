@@ -11,10 +11,11 @@ int main(int ac, char **av, char **envp) {
     char **my_env;
     my_env = ft_array_strdup(envp);
     while (1) {
+        input = ft_prompt();
         signal(SIGINT, sig_handler);
         signal(SIGQUIT, SIG_IGN);
 
-        input = ft_prompt();
+
 
         if (process_input(input))
             continue;
@@ -33,14 +34,14 @@ int main(int ac, char **av, char **envp) {
             free(input);
             continue;
         }
+        print_token_list(cmds);
         after_receiving_cmds(cmds, my_env);
 
         // handle_commands(cmds);
 
-        // print_token_list(cmds);
         // free_list(cmds);
-        // free_token_list(cmds);
-        // free(input);
+        free_token_list(cmds);
+        free(input);
     }
 
     return 0;

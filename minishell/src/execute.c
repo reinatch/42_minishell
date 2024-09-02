@@ -435,7 +435,6 @@ void print_echo(int n_flag, char **to_execute, int *fds)
 	if (!n_flag)
 		write_in_fd("\n", fds[1]);
 	close_fds(fds);
-	free_a_arrays(to_execute);
 }
 
 void ft_echo_builtin(Token *cmd) 
@@ -513,7 +512,7 @@ void sort_pos_of_envp(char **envp, int **pos_sorted, int len)
 		j = i + 1;
 		while (j < len)
 		{
-			if (ft_strcmp(envp[*(pos_sorted[i])], envp[*(pos_sorted[j])]) > 0)
+			if (ft_strcmp(envp[(*pos_sorted)[i]], envp[(*pos_sorted)[j]]) > 0)
 			{
 				temp = *(pos_sorted[i]);
 				*(pos_sorted[i]) = *(pos_sorted[j]);
@@ -538,7 +537,7 @@ void ft_env_sorted(char **envp, int fd)
 	n_strs = number_of_strs(envp);
 	pos_sorted = malloc(sizeof(int) * n_strs);
 	i = -1;
-	while (envp[i++])
+	while (envp[++i])
 		pos_sorted[i] = i;
 	sort_pos_of_envp(envp, &pos_sorted ,n_strs);
 	i = 0;
@@ -546,6 +545,7 @@ void ft_env_sorted(char **envp, int fd)
 	{
 		write(fd, "declare -x ", 11);
 		write_in_fd(envp[pos_sorted[i++]], fd);
+		write(fd, "\n", 1);
 	}
 	if (fd != 1)
 		close(fd);
@@ -657,6 +657,7 @@ char **ft_export_builtin(Token *cmd, char **envp)
 	int fd;
 
 	fd = 1;
+	new_envp = NULL;
 	if (cmd->output_file)
 		fd = open(cmd->output_file, O_RDONLY);
 	if (cmd->to_execute[1] == NULL)
@@ -668,11 +669,10 @@ char **ft_export_builtin(Token *cmd, char **envp)
 		n_strs = number_of_strs(envp);
 		new_envp = ft_envp_with_new_str(envp, n_strs, cmd->to_execute);
 		free_a_arrays(envp);
-		envp = new_envp;
 	}
 	if (cmd->output_file)
 		close(fd);
-	return envp;
+	return new_envp;
 }
 
 char **ft_unset_builtin(char **to_execute, char **envp)
@@ -711,20 +711,29 @@ void simple_command(Token *cmds, char **envp)
 	pid = fork();
 	if (pid == 0)
 		child_process(cmds, envp);
-	waitpid(pid, NULL, -1);
-	free_a_arrays(cmds->to_execute);
+	waitpid(pid, NULL, 0 );
 }
+
+
 
 void no_pipes(Token *cmds, char **envp)
 {
+	char **return_of_env;
+
 	if (ft_strncmp(cmds->to_execute[0], "cd", 2) == 0)
 		ft_cd_builtin(cmds);
 	else if (ft_strncmp(cmds->to_execute[0], "pwd", 3) == 0)
 		ft_pwd_builtin(cmds);
 	else if (ft_strncmp(cmds->to_execute[0], "export", 6) == 0)
-		envp = ft_export_builtin(cmds, envp);
+	{
+		return_of_env = ft_export_builtin(cmds, envp);
+		envp = return_of_env;
+	}
 	else if (ft_strncmp(cmds->to_execute[0], "unset", 5) == 0)
-		envp = ft_unset_builtin(cmds->to_execute, envp);
+	{
+		return_of_env = ft_unset_builtin(cmds->to_execute, envp);
+		envp = return_of_env;
+	}
 	else if (ft_strncmp(cmds->to_execute[0], "env", 3) == 0)
 		ft_env_builtin(cmds, envp);
 	else if (ft_strncmp(cmds->to_execute[0], "echo", 4) == 0)
@@ -733,35 +742,129 @@ void no_pipes(Token *cmds, char **envp)
 		simple_command(cmds, envp);
 }
 
-void with_pipes(Token *cmds, char **envp)
-{
-	int pid;
-	int pipe_fds[2];
-
-	while(cmds->pipe_to_next_token)
-	{
-		pipe(pipe_fds);
-		pid = fork();
-		if (pid == 0)
-		{
-			close(pipe_fds[0]);
-			if (!cmds->input_file)
-				dup2(pipe_fds[1], 1);
-			no_pipes(cmds, envp);
-		}
-		if (!cmds->input_file)
-			dup2(pipe_fds[0], 0);
-		waitpid(pid, NULL, 0);
-		cmds = cmds->next;
-	}
-	no_pipes(cmds, envp);
-}
+// void ft_pwd_with_pipe(Token *cmd, int *pipe_fds) // has 26 lines
+// {
+// 	char *cwd;
+// 	size_t size;
+// 	int *fd;
+//
+// 	size = 2;
+// 	fd = malloc(sizeof(int) * 2);
+// 	cwd = malloc(sizeof(char) * size);
+// 	while (getcwd(cwd, size) == NULL)
+// 	{
+// 		if (errno == ERANGE)
+// 		{
+// 			size *= 2;
+// 			free(cwd);
+// 			cwd = malloc(sizeof(char) * size);
+// 		}
+// 		else
+// 			perror("getcwd");
+// 	}
+// 	decide_in_and_out(cmd, &fd);
+// 	if (fd[1] == 1)
+// 		fd[1] = pipe_fds[0];
+// 	write_in_fd(cwd, fd[1]);
+// 	write_in_fd("\n", fd[1]);
+// 	close_fds(fd);
+// 	free(fd);
+// 	free(cwd);
+// }
+//
+// char **ft_export_with_pipe(Token *cmd, char **envp, int* pipe_fds)
+// {
+// 	int n_strs;
+// 	char **new_envp;
+// 	int fd;
+//
+// 	fd = 1;
+// 	new_envp = NULL;
+// 	if (cmd->output_file)
+// 		fd = open(cmd->output_file, O_RDONLY);
+// 	if (cmd->to_execute[1] == NULL && cmd->output_file)
+// 		ft_env_sorted(envp, fd);
+// 	else if (cmd->to_execute[1] == NULL && !cmd->output_file)
+// 		ft_env_sorted(envp, pipe_fds[0]);
+// 	else
+// 	{
+// 		if (!valid_export_args(cmd->to_execute, fd))
+// 			return envp;
+// 		n_strs = number_of_strs(envp);
+// 		new_envp = ft_envp_with_new_str(envp, n_strs, cmd->to_execute);
+// 		free_a_arrays(envp);
+// 	}
+// 	if (cmd->output_file)
+// 		close(fd);
+// 	return new_envp;
+// }
+//
+// void ft_env_with_pipe(Token *cmd, char **env, int *pipe_fds)
+// {
+// 	int fd;
+// 	int i;
+//
+// 	i = 0;
+// 	fd = 1;
+// 	if (cmd->output_file)
+// 	{
+// 		if (cmd->append)
+// 			fd = open(cmd->output_file, O_WRONLY | O_APPEND | O_CREAT);
+// 		else
+// 			fd = open(cmd->output_file, O_WRONLY | O_TRUNC | O_CREAT);
+// 	}
+// 	while (env[i])
+// 	{
+// 		write_in_fd(env[i], fd);
+// 		write_in_fd("\n", fd);
+// 		i++;
+// 	}
+// 	if (cmd->output_file)
+// 		close (fd);
+// }
+//
+// void execution_of_pipes(int *pipe_fds, Token *cmds, char **envp)
+// {
+// 	char **return_of_env;
+//
+// 	if (ft_strncmp(cmds->to_execute[0], "pwd", 3) == 0)
+// 		ft_pwd_with_pipe(cmds, pipe_fds);
+// 	else if (ft_strncmp(cmds->to_execute[0], "export", 6) == 0)
+// 	{
+// 		return_of_env = ft_export_with_pipe(cmds, envp, pipe_fds);
+// 		envp = return_of_env;
+// 	}
+// 	else if (ft_strncmp(cmds->to_execute[0], "env", 3) == 0)
+// 		ft_env_with_pipe(cmds, envp, pipe_fds);
+// 	else if (ft_strncmp(cmds->to_execute[0], "echo", 4) == 0)
+// 		ft_echo_with_pipe(cmds);
+// 	else if (is_a_builtin(cmds))
+// 		no_pipes(cmds, envp);
+// 	else
+// 		simple_command_with_pipe(cmds, envp);
+// }
+//
+// void with_pipes(Token *cmds, char **envp)
+// {
+// 	int pipe_fds[2];
+// 	int fd_in;
+//
+// 	pipe(pipe_fds);
+// 	while (cmds)
+// 	{
+// 		dup2(1, pipe_fds[0]);
+// 		execution_of_pipes(pipe_fds, cmds, envp);
+// 		dup2(0, pipe_fds[1]);
+// 		cmds = cmds->next;
+// 	}
+// 	restore_fds(pipe_fds);
+// }
 
 void after_receiving_cmds(Token *cmds, char **envp)
 {
-	if (there_is_pipes(cmds))
-		with_pipes(cmds, envp);
-	else
+	// if (there_is_pipes(cmds))
+	//	 with_pipes(cmds, envp);
+	// else
 		no_pipes(cmds, envp);
 }
 
@@ -775,23 +878,22 @@ void after_receiving_cmds(Token *cmds, char **envp)
 // 	my_env = ft_array_strdup(envp);
 // 		cmds = calloc(1, sizeof(struct Token));
 // 	cmds->pipe_to_next_token = 0;
-// 	cmds->to_execute = malloc(sizeof(char *) * 2);
-// 	cmds->to_execute[0] = ft_strdup("echo");
-// 	// cmds->to_execute[1] = ft_strdup("-nnnnnnnnnnn");
+// 	cmds->to_execute = malloc(sizeof(char *) * 8);
+// 	cmds->to_execute[0] = ft_strdup("cat");
+// 	cmds->to_execute[1] = ft_strdup("asd.txt");
 // 	// cmds->to_execute[2] = ft_strdup("-n");
 // 	// cmds->to_execute[3] = ft_strdup("-nnnnn-");
 // 	// cmds->to_execute[4] = ft_strdup("Hello World");
 // 	// cmds->to_execute[5] = ft_strdup("; Hello again");
 // 	// cmds->to_execute[6] = ft_strdup("\n\"Now, hello with double ' \"");
-// 	cmds->to_execute[1] = NULL;
-// 	cmds->append = 0;
+// 	cmds->to_execute[2] = NULL;
+// 	cmds->append = 1;
 // 	cmds->input_file = NULL;
-// 	cmds->output_file = NULL;
-// 	cmds->next = NULL;
+// 	cmds->output_file = "asd.txt";
 // 	// cmds->next = calloc(1, sizeof(struct Token));
 // 	// cmds->next->to_execute = malloc(sizeof (char *) * 3);
 // 	// cmds->next->to_execute[0] = ft_strdup("grep");
-// 	// cmds->next->to_execute[1] = ft_strdup("Hel");
+// 	// cmds->next->to_execute[1] = ft_strdup("hel");
 // 	// cmds->next->to_execute[2] = NULL;
 // 	// cmds->next->output_file = NULL;
 // 	// cmds->next->input_file = NULL;
@@ -799,6 +901,8 @@ void after_receiving_cmds(Token *cmds, char **envp)
 // 	// cmds->next->pipe_to_next_token = 0;
 // 	// cmds->next->next = NULL;
 // 	after_receiving_cmds(cmds, my_env);
+// 	free_a_arrays(cmds->to_execute);
+// 	// free_a_arrays(cmds->next->to_execute);
 // 	free_list(cmds);
 // }
 
@@ -821,4 +925,3 @@ void after_receiving_cmds(Token *cmds, char **envp)
 // 		free_list(cmds); // if needed
 // 	}
 // }
-

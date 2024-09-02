@@ -355,16 +355,13 @@ void print_token_list(Token *head) {
 // Function to prompt for user input
 char *ft_prompt()
 {
-    char *v_return;
+	char *v_return;
 
-    v_return = readline("minishell>: ");
-    if (ft_strlen(v_return) == 0) {
-        free(v_return);
-        ft_printf("\n");
-        return ft_prompt();
-    }
-    add_history(v_return);
-    return v_return;
+	v_return = readline("minishell>: ");
+	if (ft_strlen(v_return) == 0)
+		return (free(v_return), printf("\n"), ft_prompt());
+	add_history(v_return);
+	return (v_return);
 }
 
 // Function to process the input
