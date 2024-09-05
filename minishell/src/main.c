@@ -19,8 +19,15 @@ int main(int ac, char **av, char **envp) {
 
         if (process_input(input))
             continue;
+        // Expand variables in the input
+            char *expanded_input = expander(input, envp);
+            if (!expanded_input) {
+                print_error("Expansion failed", NULL, 1);
+                free(input);
+                return 1;
+            }
 
-        cmds = tokenizer(input);
+        cmds = tokenizer(expanded_input);
         if (!cmds) {
             print_error("Tokenizer failed", NULL, 1);
             free(input);
@@ -41,7 +48,8 @@ int main(int ac, char **av, char **envp) {
 
         // free_list(cmds);
         free_token_list(cmds);
-        free(input);
+        free(expanded_input);
+        // free(input);
     }
 
     return 0;

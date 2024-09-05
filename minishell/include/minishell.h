@@ -17,6 +17,7 @@
 #include <readline/history.h>
 
 // Error handling constants
+#define QUOTES "\"\'"
 #define ERROR_TITLE "minishell"
 #define ERROR_SYNTAX "syntax error"
 #define YES 1
@@ -29,7 +30,8 @@ typedef enum {
     TOKEN_REDIRECT_OUT,
     TOKEN_REDIRECT_APPEND,
     TOKEN_PIPE,
-    TOKEN_EOF
+    TOKEN_EOF,
+    TOKEN_HEREDOC
 } TokenType;
 
 typedef struct Token {
@@ -38,6 +40,8 @@ typedef struct Token {
 	char *input_file;
 	char *output_file;
 	int append;
+    char *heredoc_delimiter;
+    char *heredoc_content;
 	int pipe_to_next_token;
     struct Token *next;
 } Token;
@@ -64,6 +68,8 @@ int check_redirections(Token *head);
 char *ft_prompt();
 int process_input(char *input);
 void sig_handler(int signum);
+
+char *expander(char *input, char **envp);
 
 
 void print_token_list(Token *head);

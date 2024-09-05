@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "type": "lldb-mi",
             "request": "launch",
@@ -25,8 +26,8 @@
             "name": "parser",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/home/rei/42_minishell/minishell/minishell",
-            "args": ["ls", "-l"],
+            "program": "/home/rei/1_common_core/42_minishell/minishell/minishell",
+            "args": "",
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
@@ -49,7 +50,7 @@
             "name": "resources",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/sgoinfre/rerodrig/rei/42_minishell/RESOURCES/kuninoto/lvl_3_minishell/minishell",
+            "program": "/home/rei/42_minishell/RESOURCES/kuninoto/lvl_3_minishell/minishell",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
