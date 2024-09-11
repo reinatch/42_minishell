@@ -1,55 +1,69 @@
 
 #include "../include/minishell.h"
 
-
 int main(int ac, char **av, char **envp) {
     (void)ac; (void)av;
     char *input;
-    t_lexer *tokens = NULL;
-    t_command *commands = NULL;
-    char **my_env;
+    char *expanded_input;
+    t_program *program = malloc(sizeof(t_program));
 
-    my_env = ft_array_strdup(envp);
+    program->my_env = ft_array_strdup(envp);
+    program->tokens = NULL;
+    program->commands = NULL;
+
     while (1) {
         input = ft_prompt();
         signal(SIGINT, sig_handler);
         signal(SIGQUIT, SIG_IGN);
-
-        if (process_input(input))
+        if (process_input(input)) {
+            free(input);
             continue;
-
-        // Expand variables in the input
-        char *expanded_input = expander(input, my_env);
+        }
+        expanded_input = expander(input, program);
         if (!expanded_input) {
             print_error("Expansion failed", NULL, 1);
             free(input);
-            return 1;
+            continue;
         }
-
-        tokens = (t_lexer *)tokenizer(expanded_input);
-        if (!tokens) {
+        program->tokens = tokenizer(expanded_input);
+        if (!program->tokens) {
             print_error("Tokenizer failed", NULL, 1);
             free(input);
+            free(expanded_input);
+            continue;
+        }
+        program = parser(program);
+
+        if (!program->commands) {
+            print_error("Parser failed", NULL, 1);
+            free_token_list(program->tokens);
+            free(input);
+            free(expanded_input);
             continue;
         }
 
-        commands = parser(tokens);
-
-        // if (!check_redirections(commands)) {
-        //     free_command_list(commands);
-        //     free_token_list(tokens);
+        // Check redirections (uncomment if needed)
+        // if (!check_redirections(program->commands)) {
+        //     free_command_list(program->commands);
+        //     free_token_list(program->tokens);
         //     free(input);
+        //     free(expanded_input);
         //     continue;
         // }
 
-        print_command_list(commands);
-        after_receiving_cmds(commands, my_env);
+        // Print the command list for debugging/verification
+        print_command_list(program->commands);
 
-        free_command_list(commands);
-        free_token_list(tokens);
+        after_receiving_cmds(program->commands, program->my_env);
+
+        free_command_list(program->commands);
+        free_token_list(program->tokens);
         free(expanded_input);
+        free(input);
     }
 
+    free(program->my_env);
+    free(program);
+    
     return 0;
 }
-

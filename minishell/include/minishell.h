@@ -56,15 +56,20 @@ typedef struct s_command
 
 
 typedef struct Token {
-    char **to_execute;
-	char *input_file;
-	char *output_file;
-	int append;
-    char *heredoc_delimiter;
-    char *heredoc_content;
-	int pipe_to_next_token;
-    struct Token *next;
+    char            **to_execute;
+	char            *input_file;
+	char            *output_file;
+	int             append;
+    char            *heredoc_delimiter;
+    char            *heredoc_content;
+	int             pipe_to_next_token;
+    struct Token    *next;
 } Token;
+typedef struct s_program {
+    char        **my_env;
+    t_lexer     *tokens;
+    t_command   *commands;
+}               t_program;
 
 
 
@@ -81,7 +86,7 @@ void free_token_list(t_lexer *head);
 int check_quotes(char *line);
 void print_error(char *msg, char *key, int exit_code);
 t_lexer *tokenizer(char *input);
-t_command *parser(t_lexer *lexer);
+t_program *parser(t_program *program);
 int is_valid_input(char *input);
 int have_only_spaces(char *input);
 int check_redirections(t_command *head);
@@ -89,7 +94,7 @@ char *ft_prompt();
 int process_input(char *input);
 void sig_handler(int signum);
 
-char *expander(char *input, char **envp);
+char *expander(char *input, t_program *program);
 
 
 void print_command_list(t_command *current);

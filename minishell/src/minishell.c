@@ -199,13 +199,17 @@ size_t get_var_name_length(const char *str, size_t start) {
 // Helper function to expand a variable
 char *expand_variable(const char *input, size_t *i, char **envp)
 {
-    size_t var_name_length = get_var_name_length(input, *i + 1);
+    size_t var_name_length;
+    char *var_name;
+    char *var_value;
+
+    var_name_length = get_var_name_length(input, *i + 1);
     if (var_name_length == 0) {
         (*i)++;
         return ft_strdup("$");
     }
-    char *var_name = ft_substr(input, *i + 1, var_name_length);
-    char *var_value = get_env_value(var_name, envp);
+    var_name = ft_substr(input, *i + 1, var_name_length);
+    var_value = get_env_value(var_name, envp);
     free(var_name);
     if (!var_value) {
         (*i) += var_name_length + 1;
@@ -215,35 +219,39 @@ char *expand_variable(const char *input, size_t *i, char **envp)
     return var_value;
 }
 
-// Function to expand variables in the input string
-char *expander(char *input, char **envp) 
-{
-    
-    if (unclosed_quotes(input)) {
-        print_error("Syntax error: unclosed quotes", NULL, 1);
-        free(input);
-        return NULL;
+// Helper function to free the split array
+void ft_free_split(char **split) {
+    if (!split) return;
+    for (int i = 0; split[i]; i++) {
+        free(split[i]);
     }
-    size_t i = 0, size = 0;
+    free(split);
+}
+
+// Helper function to expand variables in a single line
+char *expand_line(char *line, t_program *program) {
+    size_t i = 0;
+    size_t size = 0;
+    char *expanded_line;
     int in_single_quote = 0;
     int in_double_quote = 0;
-    char *expanded_input;
-    // First pass: Calculate the size of the expanded string
-    while (input[i]) {
-        if (input[i] == '\'' && !in_double_quote) {
+
+    // First pass: calculate the size of the expanded string
+    while (line[i]) {
+        if (line[i] == '\'' && !in_double_quote) {
             in_single_quote = !in_single_quote;
             size++;
             i++;
-        } else if (input[i] == '"' && !in_single_quote) {
+        } else if (line[i] == '"' && !in_single_quote) {
             in_double_quote = !in_double_quote;
             size++;
             i++;
-        } else if (input[i] == '$' && !in_single_quote) {
-            if (input[i + 1] == '?') {
+        } else if (line[i] == '$' && !in_single_quote) {
+            if (line[i + 1] == '?') {
                 size += ft_strlen(ft_itoa(g_exit));
                 i += 2;
             } else {
-                char *var_value = expand_variable(input, &i, envp);
+                char *var_value = expand_variable(line, &i, program->my_env);
                 size += ft_strlen(var_value);
                 free(var_value);
             }
@@ -252,47 +260,68 @@ char *expander(char *input, char **envp)
             i++;
         }
     }
-    // Allocate memory for the expanded string
-    expanded_input = malloc((size + 1) * sizeof(char));
-    if (!expanded_input) return NULL;
+
+    // Allocate memory for the expanded line
+    expanded_line = malloc((size + 1) * sizeof(char));
+    if (!expanded_line) return NULL;
+
+    // Reset variables for second pass
     i = 0;
     size = 0;
-    // Second pass: Build the expanded string
-    while (input[i]) {
-        if (input[i] == '\'' && !in_double_quote) {
+
+    // Second pass: build the expanded string
+    while (line[i]) {
+        if (line[i] == '\'' && !in_double_quote) {
             in_single_quote = !in_single_quote;
-            expanded_input[size++] = input[i++];
-        } else if (input[i] == '"' && !in_single_quote) {
+            expanded_line[size++] = line[i++];
+        } else if (line[i] == '"' && !in_single_quote) {
             in_double_quote = !in_double_quote;
-            expanded_input[size++] = input[i++];
-        } else if (input[i] == '$' && !in_single_quote) {
-            if (input[i + 1] == '?') {
+            expanded_line[size++] = line[i++];
+        } else if (line[i] == '$' && !in_single_quote) {
+            if (line[i + 1] == '?') {
                 char *exit_status = ft_itoa(g_exit);
                 size_t k = 0;
-                while (exit_status[k]) expanded_input[size++] = exit_status[k++];
+                while (exit_status[k]) expanded_line[size++] = exit_status[k++];
                 free(exit_status);
                 i += 2;
             } else {
-                char *var_value = expand_variable(input, &i, envp);
+                char *var_value = expand_variable(line, &i, program->my_env);
                 size_t k = 0;
-                while (var_value[k]) expanded_input[size++] = var_value[k++];
+                while (var_value[k]) expanded_line[size++] = var_value[k++];
                 free(var_value);
             }
         } else {
-            expanded_input[size++] = input[i++];
+            expanded_line[size++] = line[i++];
         }
     }
-    expanded_input[size] = '\0';
-    // Remove quotes from the expanded string
-    char *final_expanded_input = remove_quotes(expanded_input);
-        if (!final_expanded_input) {
-            free(expanded_input);
-            return NULL;
-        }
-    // free(expanded_input);
-    // free(input);
-    return final_expanded_input;
+    expanded_line[size] = '\0';
+
+    return expanded_line;
 }
+
+// Function to expand variables in the input string (supports multi-line)
+char *expander(char *input, t_program *program) {
+    char **lines;
+    char *expanded_input = ft_strdup("");
+    char *temp;
+    size_t i = 0;
+
+    lines = ft_split(input, '\n');
+    
+    while (lines[i]) {
+        char *expanded_line = expand_line(lines[i], program);
+        temp = expanded_input;
+        expanded_input = ft_strjoin(expanded_input, expanded_line);
+        expanded_input = ft_strjoin(expanded_input, "\n");
+
+        free(temp);
+        free(expanded_line);
+        i++;
+    }
+    ft_free_split(lines);
+    return expanded_input;
+}
+
 char *ft_strdup(const char *s1) {
     char *copy = malloc(strlen(s1) + 1);
     if (copy)
@@ -450,9 +479,10 @@ void loop_heredoc(char *delimiter, char **hd_content)
 {
     char *line;
     char *new_content;
-    *hd_content = ft_strdup("");  
+    *hd_content = ft_strdup("");
+    char *old_content; 
     while (1) {
-        line = readline("> ");  
+        line = readline("> ");
         if (!line || !ft_strncmp(line, delimiter, ft_strlen(delimiter) + 1)) 
         {
             if (!line) {
@@ -462,26 +492,50 @@ void loop_heredoc(char *delimiter, char **hd_content)
             free(line);
             break;
         }
+        // Concatenate each line into heredoc content
         new_content = ft_strjoin(line, "\n");
-        char *old_content = *hd_content;
+        old_content = *hd_content;
         *hd_content = ft_strjoin(old_content, new_content);
         free(old_content);
         free(new_content);
         free(line);
     }
 }
-void heredoc(t_command *cmd) {
+
+void heredoc(t_program *program) {
     char *hd_content;
-    loop_heredoc(cmd->heredoc_delimiter, &hd_content);
-    cmd->heredoc_content = hd_content;  
-    // No need to write to a pipe??
+    char *expanded;
+
+    // Capture the entire heredoc content
+    loop_heredoc(program->commands->heredoc_delimiter, &hd_content);
+
+    // Expand variables in the heredoc content
+    expanded = expander(hd_content, program);
+
+    if (expanded) {
+        // Store expanded heredoc content in the command
+        program->commands->heredoc_content = ft_strdup(expanded);
+    } else {
+        // If expansion failed, store the original content
+        program->commands->heredoc_content = ft_strdup(hd_content);
+    }
+
+    // Free memory
+    free(hd_content);
+    free(expanded);
 }
-// Updated parser function
-t_command *parser(t_lexer *lexer) {
+
+
+
+
+t_program *parser(t_program *program)
+{
+
     t_command *head = NULL;
     t_command *current_cmd = NULL;
-    while (lexer) {
-        if (lexer->type == TOKEN_WORD) {
+
+    while (program->tokens) {
+        if (program->tokens->type == TOKEN_WORD) {
             current_cmd = malloc(sizeof(t_command));
             if (!current_cmd) {
                 fprintf(stderr, "Memory allocation failed\n");
@@ -490,7 +544,7 @@ t_command *parser(t_lexer *lexer) {
             }
             memset(current_cmd, 0, sizeof(t_command));
             add_command(&head, current_cmd);
-            int argc = count_args(lexer);
+            int argc = count_args(program->tokens);
             current_cmd->to_execute = calloc(argc + 1, sizeof(char *));
             if (!current_cmd->to_execute) {
                 fprintf(stderr, "Memory allocation failed\n");
@@ -498,53 +552,55 @@ t_command *parser(t_lexer *lexer) {
                 exit(EXIT_FAILURE);
             }
             int arg_index = 0;
-            while (lexer && lexer->type != TOKEN_PIPE) {
-                if (lexer->type == TOKEN_WORD) {
-                    current_cmd->to_execute[arg_index++] = ft_strdup(lexer->str);
-                } else if (lexer->type == TOKEN_REDIRECT_IN) {
-                    lexer = lexer->next;
-                    if (lexer && lexer->type == TOKEN_WORD) {
-                        current_cmd->input_file = ft_strdup(lexer->str);
+            while (program->tokens && program->tokens->type != TOKEN_PIPE) {
+                if (program->tokens->type == TOKEN_WORD) {
+                    current_cmd->to_execute[arg_index++] = ft_strdup(program->tokens->str);
+                } else if (program->tokens->type == TOKEN_REDIRECT_IN) {
+                    program->tokens = program->tokens->next;
+                    if (program->tokens && program->tokens->type == TOKEN_WORD) {
+                        current_cmd->input_file = ft_strdup(program->tokens->str);
                     }
-                } else if (lexer->type == TOKEN_REDIRECT_OUT) {
-                    lexer = lexer->next;
-                    if (lexer && lexer->type == TOKEN_WORD) {
-                        current_cmd->output_file = ft_strdup(lexer->str);
+                } else if (program->tokens->type == TOKEN_REDIRECT_OUT) {
+                    program->tokens = program->tokens->next;
+                    if (program->tokens && program->tokens->type == TOKEN_WORD) {
+                        current_cmd->output_file = ft_strdup(program->tokens->str);
                     }
-                } else if (lexer->type == TOKEN_REDIRECT_APPEND) {
-                    lexer = lexer->next;
-                    if (lexer && lexer->type == TOKEN_WORD) {
-                        current_cmd->output_file = ft_strdup(lexer->str);
+                } else if (program->tokens->type == TOKEN_REDIRECT_APPEND) {
+                    program->tokens = program->tokens->next;
+                    if (program->tokens && program->tokens->type == TOKEN_WORD) {
+                        current_cmd->output_file = ft_strdup(program->tokens->str);
                         current_cmd->append = 1;
                     }
-                } else if (lexer->type == TOKEN_HEREDOC) {
-                    lexer = lexer->next;
-                    if (lexer && lexer->type == TOKEN_WORD) {
-                        current_cmd->heredoc_delimiter = ft_strdup(lexer->str);
-                        current_cmd->heredoc_content = NULL; 
+                } else if (program->tokens->type == TOKEN_HEREDOC) {
+                    program->tokens = program->tokens->next;
+                    if (program->tokens && program->tokens->type == TOKEN_WORD) {
+                        current_cmd->heredoc_delimiter = ft_strdup(program->tokens->str);
+                        current_cmd->heredoc_content = NULL;
                     }
                 }
-                lexer = lexer->next;
+                program->tokens = program->tokens->next;
             }
-            if (lexer && lexer->type == TOKEN_PIPE) {
+            if (program->tokens && program->tokens->type == TOKEN_PIPE) {
                 current_cmd->pipe_to_next_token = 1;
-                lexer = lexer->next;
-                current_cmd = NULL; 
+                program->tokens = program->tokens->next;
+                current_cmd = NULL;
             }
         } else {
-            lexer = lexer->next;
+            program->tokens = program->tokens->next;
         }
     }
-    
     t_command *cmd = head;
+    program->commands = head;
     while (cmd) {
         if (cmd->heredoc_delimiter) {
-            heredoc(cmd); 
+            heredoc(program);
         }
         cmd = cmd->next;
     }
-    return head;
+    return program;
 }
+
+
 int check_redirections(t_command *head)
 {
     t_command *current = head;
@@ -581,6 +637,7 @@ void print_command_list(t_command *current) {
         } else {
             printf("UNKNOWN\n");
         }
+
         if (current->to_execute) {
             printf("Value: ");
             for (int j = 0; current->to_execute[j]; j++) {
@@ -590,6 +647,7 @@ void print_command_list(t_command *current) {
         } else {
             printf("Value: NULL\n");
         }
+
         printf("Input File: %s\n", current->input_file ? current->input_file : "NULL");
         printf("Output File: %s\n", current->output_file ? current->output_file : "NULL");
         printf("Delimiter: %s\n", current->heredoc_delimiter ? current->heredoc_delimiter : "NULL");
@@ -597,9 +655,11 @@ void print_command_list(t_command *current) {
         printf("Append: %d\n", current->append);
         printf("Pipe to Next Token: %d\n", current->pipe_to_next_token);
         printf("\n");
-        current = current->next; 
+
+        current = current->next;
     }
 }
+
 // Function to prompt for user input
 char *ft_prompt()
 {
