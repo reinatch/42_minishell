@@ -1,83 +1,35 @@
-
-
 #include "../include/minishell.h"
-
-
 // Global exit status
 int g_exit = 0;
 
-
-
-// Function to create a new token
-Token *new_token(TokenType type, char **value) {
-    Token *token = (Token *)malloc(sizeof(Token));
-    if (!token) return NULL;
-
-    token->type = type;
-
-    // Calculate the size of the value array
-    size_t count = 0;
-    while (value[count]) {
-        count++;
-    }
-
-    // Allocate memory for to_execute array
-    token->to_execute = (char **)malloc((count + 1) * sizeof(char *));
-    if (!token->to_execute) {
-        free(token);
-        return NULL;
-    }
-
-    // Copy each string into the to_execute array
-    for (size_t i = 0; i < count; i++) {
-        token->to_execute[i] = ft_strdup(value[i]);
-        if (!token->to_execute[i]) {
-            // Free previously allocated memory if strdup fails
-            while (i > 0) {
-                free(token->to_execute[--i]);
-            }
-            free(token->to_execute);
-            free(token);
-            return NULL;
-        }
-    }
-    token->to_execute[count] = NULL; // Null-terminate the array
-
-    token->input_file = NULL;
-    token->output_file = NULL;
-    token->append = 0;
-    token->pipe_to_next_token = 0;
-    token->next = NULL;
-    return token;
-}
-
-
 // Function to free the token list
-void free_token_list(Token *head) {
-    Token *temp;
+void free_command_list(t_command *head)
+{
+    t_command *temp;
     while (head != NULL) {
         temp = head;
         head = head->next;
-
-        // Free each string in the to_execute array
         if (temp->to_execute) {
             int i = 0;
-            while (temp->to_execute[i]) {
+            while (temp->to_execute[i] != NULL) {
                 free(temp->to_execute[i]);
                 i++;
             }
             free(temp->to_execute);
         }
-
-        // Free other dynamically allocated strings
         if (temp->input_file) {
             free(temp->input_file);
         }
         if (temp->output_file) {
             free(temp->output_file);
         }
-
-        // Free the Token struct itself
+        if (temp->heredoc_delimiter) {
+            free(temp->heredoc_delimiter);
+        }
+        if (temp->heredoc_content) {
+            free(temp->heredoc_content);
+        }
+        // Free the t_command struct itself
         free(temp);
     }
 }
@@ -87,10 +39,12 @@ int find_next_quote(char *line, int start, int *count, char quote)
 {
     int i = start + 1;
     *count += 1;
-    while (line[i] && line[i] != quote)
+    while (line[i] && line[i] != quote) {
         i++;
-    if (line[i] == quote)
+    }
+    if (line[i] == quote) {
         *count += 1;
+    }
     return (i - start);
 }
 
@@ -101,12 +55,13 @@ int check_quotes(char *line)
     int double_quote_count = 0;
     int single_quote_count = 0;
     while (line[i]) {
-        if (line[i] == '\'')
+        if (line[i] == '\'') {
             i += find_next_quote(line, i, &single_quote_count, '\'');
-        else if (line[i] == '"')
+        } else if (line[i] == '"') {
             i += find_next_quote(line, i, &double_quote_count, '"');
-        else
+        } else {
             i++;
+        }
     }
     return (double_quote_count % 2 == 0) && (single_quote_count % 2 == 0);
 }
@@ -115,138 +70,317 @@ int check_quotes(char *line)
 void print_error(char *msg, char *key, int exit_code)
 {
     if (key) {
-        if (msg)
+        if (msg) {
             ft_printf("%s: %s: %s\n", ERROR_TITLE, key, msg);
-        else
+        } else {
             ft_printf("%s: %s `%s'\n", ERROR_TITLE, ERROR_SYNTAX, key);
+        }
     } else {
         ft_printf("%s: %s\n", ERROR_TITLE, msg);
     }
     g_exit = exit_code;
 }
 
-// Tokenizer function to split the input into tokens
-Token *tokenizer(char *input)
+// Function to check if a character is present in a string
+int ft_chkchar(const char *str, int ch)
 {
-    Token *head = NULL, *tail = NULL;
-    char **parts = ft_split(input, ' ');
-    char **command = NULL;
-    int command_count = 0;
-    int i = 0;
-
-    while (parts[i]) {
-        if (ft_strcmp(parts[i], "<") == 0) {
-            if (parts[i + 1]) {
-                if (tail) {
-                    tail->type = TOKEN_REDIRECT_IN;
-                    tail->input_file = ft_strdup(parts[++i]);
-                } else {
-                    print_error("Redirection operator '<' used without preceding command", NULL, 1);
-                    free(parts);
-                    return NULL;
-                }
-            } else {
-                print_error("Redirection operator '<' missing filename", NULL, 1);
-                free(parts);
-                return NULL;
-            }
-        } else if (ft_strcmp(parts[i], ">") == 0) {
-            if (parts[i + 1]) {
-                if (tail) {
-                    tail->type = TOKEN_REDIRECT_OUT;
-                    tail->output_file = ft_strdup(parts[++i]);
-                    tail->append = 0;
-                } else {
-                    print_error("Redirection operator '>' used without preceding command", NULL, 1);
-                    free(parts);
-                    return NULL;
-                }
-            } else {
-                print_error("Redirection operator '>' missing filename", NULL, 1);
-                free(parts);
-                return NULL;
-            }
-        } else if (ft_strcmp(parts[i], ">>") == 0) {
-            if (parts[i + 1]) {
-                if (tail) {
-                    tail->type = TOKEN_REDIRECT_APPEND;
-                    tail->output_file = ft_strdup(parts[++i]);
-                    tail->append = 1;
-                } else {
-                    print_error("Redirection operator '>>' used without preceding command", NULL, 1);
-                    free(parts);
-                    return NULL;
-                }
-            } else {
-                print_error("Redirection operator '>>' missing filename", NULL, 1);
-                free(parts);
-                return NULL;
-            }
-        } else if (ft_strcmp(parts[i], "|") == 0) {
-            if (tail) {
-                tail->pipe_to_next_token = 1;
-            } else {
-                print_error("Pipe operator '|' used without preceding command", NULL, 1);
-                free(parts);
-                return NULL;
-            }
-        } else {
-            // Handle command and arguments
-            command_count++;
-            command = realloc(command, sizeof(char *) * (command_count + 1));
-            command[command_count - 1] = ft_strdup(parts[i]);
-            command[command_count] = NULL;
-
-            if (command && (!parts[i + 1] || ft_strcmp(parts[i + 1], "|") == 0 || ft_strcmp(parts[i + 1], "<") == 0 || ft_strcmp(parts[i + 1], ">") == 0 || ft_strcmp(parts[i + 1], ">>") == 0)) {
-                Token *new_tok = new_token(TOKEN_WORD, command);
-                if (!head) {
-                    head = new_tok;
-                } else {
-                    tail->next = new_tok;
-                }
-                tail = new_tok;
-                command = NULL;
-                command_count = 0;
-            }
-        }
-        i++;
+    size_t i;
+    if (!str) {
+        return 0;
     }
-
-    free(parts);
-    return head;
+    i = 0;
+    while (str[i]) {
+        if (str[i] == ch) {
+            return 1;
+        }
+        i += 1;
+    }
+    return 0;
 }
 
-// Parser function to set redirection files
-void parser(Token *head)
+int	unclosed_quotes(char *str)
 {
-    Token *current = head;
-    while (current) {
-        if (current->type == TOKEN_REDIRECT_IN) {
-            if (current->next && current->next->type == TOKEN_WORD) {
-                current->input_file = ft_strdup(current->next->to_execute[0]);
-                Token *temp = current->next;
-                current->next = current->next->next;
-                free(temp->to_execute);
-                free(temp);
-            } else {
-                print_error("Redirection '<' must be followed by a filename", NULL, 1);
-                return;
-            }
-        } else if (current->type == TOKEN_REDIRECT_OUT || current->type == TOKEN_REDIRECT_APPEND) {
-            if (current->next && current->next->type == TOKEN_WORD) {
-                current->output_file = ft_strdup(current->next->to_execute[0]);
-                current->append = (current->type == TOKEN_REDIRECT_APPEND);
-                Token *temp = current->next;
-                current->next = current->next->next;
-                free(temp->to_execute);
-                free(temp);
-            } else {
-                print_error("Redirection '>' or '>>' must be followed by a filename", NULL, 1);
-                return;
-            }
+	char	last_opened;
+	last_opened = 0;
+	while (*str && !last_opened)
+	{
+		if (*str == '\'' || *str == '"')
+			last_opened = *str;
+		str++;
+	}
+	while (*str && last_opened)
+	{
+		if (*str && *str == last_opened)
+			last_opened = 0;
+		str++;
+	}
+	if (*str)
+		return (unclosed_quotes(str));
+	else if (!last_opened)
+		return (0);
+	else
+		return (1);
+}
+
+static size_t	remove_quotes_size(char	*parsed)
+{
+	size_t	i;
+	size_t	size;
+	char	quotes;
+	i = 0;
+	size = 0;
+	while (parsed[i])
+	{
+		while (parsed[i] && !ft_chkchar(QUOTES, parsed[i]))
+		{
+			i += 1;
+			size += 1;
+		}
+		if (!parsed[i])
+			break ;
+		quotes = parsed[i++];
+		while (parsed[i] && parsed[i] != quotes)
+		{
+			i += 1;
+			size += 1;
+		}
+		quotes = 0;
+	}
+	return (size);
+}
+
+char	*remove_quotes(char	*parsed)
+{
+	size_t	i;
+	size_t	j;
+	char	quotes;
+	char	*unquoted_parsed;
+	i = 0;
+	j = 0;
+	quotes = '\0';
+	unquoted_parsed = malloc((remove_quotes_size(parsed) + 1) * sizeof(char));
+	while (parsed[i])
+	{
+		while (parsed[i] && !ft_chkchar(QUOTES, parsed[i]))
+			unquoted_parsed[j++] = parsed[i++];
+		if (!parsed[i])
+			break ;
+		quotes = parsed[i];
+		i += 1;
+		while (parsed[i] && parsed[i] != quotes)
+			unquoted_parsed[j++] = parsed[i++];
+		quotes = '\0';
+	}
+	unquoted_parsed[j] = '\0';
+	free(parsed);
+	return (unquoted_parsed);
+}
+
+// Helper function to get environment variable value
+char *get_env_value(const char *var_name, char **envp) {
+    size_t len = ft_strlen(var_name);
+    for (int i = 0; envp[i]; i++) {
+        if (ft_strncmp(envp[i], var_name, len) == 0 && envp[i][len] == '=') {
+            return ft_strdup(&envp[i][len + 1]);
         }
-        current = current->next;
     }
+    return NULL;
+}
+
+// Function to get the length of a variable name
+size_t get_var_name_length(const char *str, size_t start) {
+    size_t length = 0;
+    while (str[start + length] && (str[start + length] != ' ' && str[start + length] != '"' && str[start + length] != '\'' && str[start + length] != '$')) {
+        length++;
+    }
+    return length;
+}
+
+// Helper function to expand a variable
+char *expand_variable(const char *input, size_t *i, char **envp)
+{
+    size_t var_name_length = get_var_name_length(input, *i + 1);
+    if (var_name_length == 0) {
+        (*i)++;
+        return ft_strdup("$");
+    }
+    char *var_name = ft_substr(input, *i + 1, var_name_length);
+    char *var_value = get_env_value(var_name, envp);
+    free(var_name);
+    if (!var_value) {
+        (*i) += var_name_length + 1;
+        return ft_strdup("");
+    }
+    (*i) += var_name_length + 1;
+    return var_value;
+}
+
+// Function to expand variables in the input string
+char *expander(char *input, char **envp) 
+{
+    
+    if (unclosed_quotes(input)) {
+        print_error("Syntax error: unclosed quotes", NULL, 1);
+        free(input);
+        return NULL;
+    }
+    size_t i = 0, size = 0;
+    int in_single_quote = 0;
+    int in_double_quote = 0;
+    char *expanded_input;
+    // First pass: Calculate the size of the expanded string
+    while (input[i]) {
+        if (input[i] == '\'' && !in_double_quote) {
+            in_single_quote = !in_single_quote;
+            size++;
+            i++;
+        } else if (input[i] == '"' && !in_single_quote) {
+            in_double_quote = !in_double_quote;
+            size++;
+            i++;
+        } else if (input[i] == '$' && !in_single_quote) {
+            if (input[i + 1] == '?') {
+                size += ft_strlen(ft_itoa(g_exit));
+                i += 2;
+            } else {
+                char *var_value = expand_variable(input, &i, envp);
+                size += ft_strlen(var_value);
+                free(var_value);
+            }
+        } else {
+            size++;
+            i++;
+        }
+    }
+    // Allocate memory for the expanded string
+    expanded_input = malloc((size + 1) * sizeof(char));
+    if (!expanded_input) return NULL;
+    i = 0;
+    size = 0;
+    // Second pass: Build the expanded string
+    while (input[i]) {
+        if (input[i] == '\'' && !in_double_quote) {
+            in_single_quote = !in_single_quote;
+            expanded_input[size++] = input[i++];
+        } else if (input[i] == '"' && !in_single_quote) {
+            in_double_quote = !in_double_quote;
+            expanded_input[size++] = input[i++];
+        } else if (input[i] == '$' && !in_single_quote) {
+            if (input[i + 1] == '?') {
+                char *exit_status = ft_itoa(g_exit);
+                size_t k = 0;
+                while (exit_status[k]) expanded_input[size++] = exit_status[k++];
+                free(exit_status);
+                i += 2;
+            } else {
+                char *var_value = expand_variable(input, &i, envp);
+                size_t k = 0;
+                while (var_value[k]) expanded_input[size++] = var_value[k++];
+                free(var_value);
+            }
+        } else {
+            expanded_input[size++] = input[i++];
+        }
+    }
+    expanded_input[size] = '\0';
+    // Remove quotes from the expanded string
+    char *final_expanded_input = remove_quotes(expanded_input);
+        if (!final_expanded_input) {
+            free(expanded_input);
+            return NULL;
+        }
+    // free(expanded_input);
+    // free(input);
+    return final_expanded_input;
+}
+char *ft_strdup(const char *s1) {
+    char *copy = malloc(strlen(s1) + 1);
+    if (copy)
+        strcpy(copy, s1);
+    return copy;
+}
+t_lexer *new_token(char *src, t_tokenType type) 
+{
+    t_lexer *new = malloc(sizeof(t_lexer));
+    new->str = ft_strdup(src);
+    new->size = strlen(src);
+    new->type = type;
+    new->next = NULL;
+    return new;
+}
+
+void add_token(t_lexer **head, t_lexer *new_token) 
+{
+    if (*head == NULL) {
+        *head = new_token;
+    } else {
+        t_lexer *temp = *head;
+        while (temp->next)
+            temp = temp->next;
+        temp->next = new_token;
+    }
+}
+
+void free_token_list(t_lexer *head) 
+{
+    t_lexer *temp;
+    while (head) {
+        temp = head;
+        head = head->next;
+        free(temp->str);
+        free(temp);
+    }
+}
+
+// void free_command_list(t_command *head) {
+//     t_command *temp;
+//     while (head) {
+//         temp = head;
+//         head = head->next;
+//         if (temp->to_execute) {
+//             for (int i = 0; temp->to_execute[i]; i++)
+//                 free(temp->to_execute[i]);
+//             free(temp->to_execute);
+//         }
+//         free(temp->input_file);
+//         free(temp->output_file);
+//         free(temp->heredoc_delimiter);
+//         free(temp->heredoc_content);
+//         free(temp);
+//     }
+// }
+
+t_lexer *tokenizer(char *input) {
+    t_lexer *lexer = NULL;
+    char *start;
+    while (*input) {
+        if (isspace(*input)) {
+            input++;
+            continue;
+        }
+        if (strncmp(input, "<<", 2) == 0) {
+            add_token(&lexer, new_token("<<", TOKEN_HEREDOC));
+            input += 2;
+        } else if (strncmp(input, ">>", 2) == 0) {
+            add_token(&lexer, new_token(">>", TOKEN_REDIRECT_APPEND));
+            input += 2;
+        } else if (*input == '<') {
+            add_token(&lexer, new_token("<", TOKEN_REDIRECT_IN));
+            input++;
+        } else if (*input == '>') {
+            add_token(&lexer, new_token(">", TOKEN_REDIRECT_OUT));
+            input++;
+        } else if (*input == '|') {
+            add_token(&lexer, new_token("|", TOKEN_PIPE));
+            input++;
+        } else {
+            start = input;
+            while (*input && !isspace(*input) && *input != '<' && *input != '>' && *input != '|')
+                input++;
+            add_token(&lexer, new_token(strndup(start, input - start), TOKEN_WORD));
+        }
+    }
+    return lexer;
 }
 
 // Function to check if the input is valid
@@ -274,10 +408,146 @@ int have_only_spaces(char *input)
     return 1;
 }
 
-// Function to check redirections validity
-int check_redirections(Token *head)
+int count_args(t_lexer *lexer) {
+    int count = 0;
+    while (lexer && lexer->type != TOKEN_PIPE) {
+        if (lexer->type == TOKEN_WORD)
+            count++;
+        lexer = lexer->next;
+    }
+    return count;
+}
+
+void add_command(t_command **head, t_command *new_command) {
+    if (*head == NULL) {
+        *head = new_command;
+    } else {
+        t_command *temp = *head;
+        while (temp->next) {
+            temp = temp->next;
+        }
+        temp->next = new_command;
+    }
+}
+
+// Function to initialize a new command
+t_command *new_command() 
 {
-    Token *current = head;
+    t_command *cmd = (t_command *)malloc(sizeof(t_command));
+    
+    if (!cmd) return NULL; 
+    cmd->to_execute = NULL;
+    cmd->input_file = NULL;
+    cmd->output_file = NULL;
+    cmd->append = 0;
+    cmd->heredoc_delimiter = NULL;
+    cmd->heredoc_content = NULL;
+    cmd->pipe_to_next_token = 0;
+    cmd->next = NULL;
+    return cmd;
+}
+void loop_heredoc(char *delimiter, char **hd_content) 
+{
+    char *line;
+    char *new_content;
+    *hd_content = ft_strdup("");  
+    while (1) {
+        line = readline("> ");  
+        if (!line || !ft_strncmp(line, delimiter, ft_strlen(delimiter) + 1)) 
+        {
+            if (!line) {
+                perror("Error reading heredoc input");
+                exit(EXIT_FAILURE);
+            }
+            free(line);
+            break;
+        }
+        new_content = ft_strjoin(line, "\n");
+        char *old_content = *hd_content;
+        *hd_content = ft_strjoin(old_content, new_content);
+        free(old_content);
+        free(new_content);
+        free(line);
+    }
+}
+void heredoc(t_command *cmd) {
+    char *hd_content;
+    loop_heredoc(cmd->heredoc_delimiter, &hd_content);
+    cmd->heredoc_content = hd_content;  
+    // No need to write to a pipe??
+}
+// Updated parser function
+t_command *parser(t_lexer *lexer) {
+    t_command *head = NULL;
+    t_command *current_cmd = NULL;
+    while (lexer) {
+        if (lexer->type == TOKEN_WORD) {
+            current_cmd = malloc(sizeof(t_command));
+            if (!current_cmd) {
+                fprintf(stderr, "Memory allocation failed\n");
+                free_command_list(head);
+                exit(EXIT_FAILURE);
+            }
+            memset(current_cmd, 0, sizeof(t_command));
+            add_command(&head, current_cmd);
+            int argc = count_args(lexer);
+            current_cmd->to_execute = calloc(argc + 1, sizeof(char *));
+            if (!current_cmd->to_execute) {
+                fprintf(stderr, "Memory allocation failed\n");
+                free_command_list(head);
+                exit(EXIT_FAILURE);
+            }
+            int arg_index = 0;
+            while (lexer && lexer->type != TOKEN_PIPE) {
+                if (lexer->type == TOKEN_WORD) {
+                    current_cmd->to_execute[arg_index++] = ft_strdup(lexer->str);
+                } else if (lexer->type == TOKEN_REDIRECT_IN) {
+                    lexer = lexer->next;
+                    if (lexer && lexer->type == TOKEN_WORD) {
+                        current_cmd->input_file = ft_strdup(lexer->str);
+                    }
+                } else if (lexer->type == TOKEN_REDIRECT_OUT) {
+                    lexer = lexer->next;
+                    if (lexer && lexer->type == TOKEN_WORD) {
+                        current_cmd->output_file = ft_strdup(lexer->str);
+                    }
+                } else if (lexer->type == TOKEN_REDIRECT_APPEND) {
+                    lexer = lexer->next;
+                    if (lexer && lexer->type == TOKEN_WORD) {
+                        current_cmd->output_file = ft_strdup(lexer->str);
+                        current_cmd->append = 1;
+                    }
+                } else if (lexer->type == TOKEN_HEREDOC) {
+                    lexer = lexer->next;
+                    if (lexer && lexer->type == TOKEN_WORD) {
+                        current_cmd->heredoc_delimiter = ft_strdup(lexer->str);
+                        current_cmd->heredoc_content = NULL; 
+                    }
+                }
+                lexer = lexer->next;
+            }
+            if (lexer && lexer->type == TOKEN_PIPE) {
+                current_cmd->pipe_to_next_token = 1;
+                lexer = lexer->next;
+                current_cmd = NULL; 
+            }
+        } else {
+            lexer = lexer->next;
+        }
+    }
+    
+    t_command *cmd = head;
+    while (cmd) {
+        if (cmd->heredoc_delimiter) {
+            heredoc(cmd); 
+        }
+        cmd = cmd->next;
+    }
+    return head;
+}
+int check_redirections(t_command *head)
+{
+    t_command *current = head;
     while (current) {
         if ((current->type == TOKEN_REDIRECT_IN || 
              current->type == TOKEN_REDIRECT_OUT || 
@@ -291,79 +561,55 @@ int check_redirections(Token *head)
     return 1;
 }
 
-// Function to handle commands
-void handle_commands(Token *head) {
-    Token *current = head;
-    while (current) {
-        if (current->type == TOKEN_WORD) {
-            ft_printf("Executing command: ");
-            for (int i = 0; current->to_execute[i]; i++) {
-                ft_printf("%s ", current->to_execute[i]);
-            }
-            ft_printf("\n");
-        }
-        current = current->next;
-    }
-}
-
-// Function to print the token list
-void print_token_list(Token *head) {
-    Token *current = head;
+void print_command_list(t_command *current) {
     int i = 1;
     while (current) {
-        ft_printf("command %d\n", i);
-        ft_printf("Token Type: ");
-        switch (current->type) {
-            case TOKEN_WORD:
-                ft_printf("WORD\n");
-                break;
-            case TOKEN_REDIRECT_IN:
-                ft_printf("REDIRECT_IN\n");
-                break;
-            case TOKEN_REDIRECT_OUT:
-                ft_printf("REDIRECT_OUT\n");
-                break;
-            case TOKEN_REDIRECT_APPEND:
-                ft_printf("REDIRECT_APPEND\n");
-                break;
-            case TOKEN_EOF:
-                ft_printf("EOF\n");
-                break;
-            default:
-                ft_printf("UNKNOWN\n");
-                break;
+        printf("Command %d\n", i++);
+        printf("Token Type: ");
+        if (current->type == TOKEN_WORD) {
+            printf("WORD\n");
+        } else if (current->type == TOKEN_REDIRECT_IN) {
+            printf("REDIRECT_IN\n");
+        } else if (current->type == TOKEN_REDIRECT_OUT) {
+            printf("REDIRECT_OUT\n");
+        } else if (current->type == TOKEN_REDIRECT_APPEND) {
+            printf("REDIRECT_APPEND\n");
+        } else if (current->type == TOKEN_PIPE) {
+            printf("PIPE\n");
+        } else if (current->type == TOKEN_HEREDOC) {
+            printf("HEREDOC\n");
+        } else {
+            printf("UNKNOWN\n");
         }
         if (current->to_execute) {
-            ft_printf("Value: ");
+            printf("Value: ");
             for (int j = 0; current->to_execute[j]; j++) {
-                ft_printf("[%s], ", current->to_execute[j]);
+                printf("[%s] ", current->to_execute[j]);
             }
-            ft_printf("\n");
+            printf("\n");
         } else {
-            ft_printf("Value: NULL\n");
+            printf("Value: NULL\n");
         }
-        ft_printf("Input File: %s\n", current->input_file ? current->input_file : "NULL");
-        ft_printf("Output File: %s\n", current->output_file ? current->output_file : "NULL");
-        ft_printf("Append: %d\n", current->append);
-        ft_printf("Pipe to Next Token: %d\n", current->pipe_to_next_token);
-        ft_printf("\n");
-        current = current->next;
-        i++;
+        printf("Input File: %s\n", current->input_file ? current->input_file : "NULL");
+        printf("Output File: %s\n", current->output_file ? current->output_file : "NULL");
+        printf("Delimiter: %s\n", current->heredoc_delimiter ? current->heredoc_delimiter : "NULL");
+        printf("Content: %s\n", current->heredoc_content ? current->heredoc_content : "NULL");
+        printf("Append: %d\n", current->append);
+        printf("Pipe to Next Token: %d\n", current->pipe_to_next_token);
+        printf("\n");
+        current = current->next; 
     }
 }
-
 // Function to prompt for user input
 char *ft_prompt()
 {
 	char *v_return;
-
 	v_return = readline("minishell>: ");
 	if (ft_strlen(v_return) == 0)
 		return (free(v_return), printf("\n"), ft_prompt());
 	add_history(v_return);
 	return (v_return);
 }
-
 // Function to process the input
 int process_input(char *input)
 {
@@ -380,14 +626,13 @@ int process_input(char *input)
         free(input);
         return 1; 
     }
-    if (!check_quotes(input)) {
-        print_error("Mismatched quotes", NULL, 1);
-        free(input);
-        return 1;
-    }
+    // if (!check_quotes(input)) {
+    //     print_error("Mismatched quotes", NULL, 1);
+    //     free(input);
+    //     return 1;
+    // }
     return 0;
 }
-
 void sig_handler(int signum)
 {
     if (signum == SIGINT) {
@@ -398,74 +643,3 @@ void sig_handler(int signum)
         g_exit = 130;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

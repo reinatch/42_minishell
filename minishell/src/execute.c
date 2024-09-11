@@ -16,9 +16,9 @@ int ft_strcmp(const char *s1, const char *s2)
 	return (s1[i] - s2[i]);
 }
 
-void free_list(Token *cmd)
+void free_list(t_command *cmd)
 {
-	Token *remove;
+	t_command *remove;
 
 	while (cmd != NULL)
 	{
@@ -66,7 +66,7 @@ char *find_path(char **envp)
 // 	return (v_return);
 // }
 
-int there_is_pipes(Token *cmds)
+int there_is_pipes(t_command *cmds)
 {
 	// int i;
 
@@ -133,7 +133,7 @@ char *command_path(char **to_execute, char **env)
 	return NULL;
 }
 
-void child_process(Token *cmds, char **env)
+void child_process(t_command *cmds, char **env)
 {
 	int fd_in;
 	int fd_out;
@@ -161,7 +161,7 @@ void child_process(Token *cmds, char **env)
 	exit(127);
 }
 
-void ft_cd_builtin(Token *cmds)
+void ft_cd_builtin(t_command *cmds)
 {
 	char *error;
 
@@ -177,7 +177,7 @@ void ft_cd_builtin(Token *cmds)
 	}
 }
 
-void ft_pwd_builtin(Token *cmd)
+void ft_pwd_builtin(t_command *cmd)
 {
 	char *cwd;
 	size_t size;
@@ -222,7 +222,7 @@ int is_n_flag(char **to_execute)
 	return 1;
 }
 
-void decide_in_and_out(Token *cmd, int **fds)
+void decide_in_and_out(t_command *cmd, int **fds)
 {
 	(*fds)[0] = 0;
 	(*fds)[1] = 1;
@@ -437,7 +437,7 @@ void print_echo(int n_flag, char **to_execute, int *fds)
 	close_fds(fds);
 }
 
-void ft_echo_builtin(Token *cmd) 
+void ft_echo_builtin(t_command *cmd) 
 {
 	int *fds;
 	char *str_error;
@@ -457,7 +457,7 @@ void ft_echo_builtin(Token *cmd)
 		print_echo(is_n_flag(cmd->to_execute), cmd->to_execute, fds);
 }
 
-void ft_env_builtin(Token *cmd, char **env)
+void ft_env_builtin(t_command *cmd, char **env)
 {
 	int fd;
 	int i;
@@ -650,7 +650,7 @@ char **ft_envp_with_new_str(char **envp, int n_strs, char **to_execute)
 // variables alphabetically sorteds.
 //
 // FALTA ME VERIFICAR SE O ENVIRONMENT JA TEM A VARIAVEL QUE QUERO COLOCAR
-char **ft_export_builtin(Token *cmd, char **envp)
+char **ft_export_builtin(t_command *cmd, char **envp)
 {
 	int n_strs;
 	char **new_envp;
@@ -704,7 +704,7 @@ char **ft_unset_builtin(char **to_execute, char **envp)
 	return (new_envp);
 }
 
-void simple_command(Token *cmds, char **envp)
+void simple_command(t_command *cmds, char **envp)
 {
 	int pid;
 
@@ -716,7 +716,7 @@ void simple_command(Token *cmds, char **envp)
 
 
 
-void no_pipes(Token *cmds, char **envp)
+void no_pipes(t_command *cmds, char **envp)
 {
 	char **return_of_env;
 
@@ -742,7 +742,7 @@ void no_pipes(Token *cmds, char **envp)
 		simple_command(cmds, envp);
 }
 
-// void ft_pwd_with_pipe(Token *cmd, int *pipe_fds) // has 26 lines
+// void ft_pwd_with_pipe(t_command *cmd, int *pipe_fds) // has 26 lines
 // {
 // 	char *cwd;
 // 	size_t size;
@@ -772,7 +772,7 @@ void no_pipes(Token *cmds, char **envp)
 // 	free(cwd);
 // }
 //
-// char **ft_export_with_pipe(Token *cmd, char **envp, int* pipe_fds)
+// char **ft_export_with_pipe(t_command *cmd, char **envp, int* pipe_fds)
 // {
 // 	int n_strs;
 // 	char **new_envp;
@@ -799,7 +799,7 @@ void no_pipes(Token *cmds, char **envp)
 // 	return new_envp;
 // }
 //
-// void ft_env_with_pipe(Token *cmd, char **env, int *pipe_fds)
+// void ft_env_with_pipe(t_command *cmd, char **env, int *pipe_fds)
 // {
 // 	int fd;
 // 	int i;
@@ -823,7 +823,7 @@ void no_pipes(Token *cmds, char **envp)
 // 		close (fd);
 // }
 //
-// void execution_of_pipes(int *pipe_fds, Token *cmds, char **envp)
+// void execution_of_pipes(int *pipe_fds, t_command *cmds, char **envp)
 // {
 // 	char **return_of_env;
 //
@@ -844,7 +844,7 @@ void no_pipes(Token *cmds, char **envp)
 // 		simple_command_with_pipe(cmds, envp);
 // }
 //
-// void with_pipes(Token *cmds, char **envp)
+// void with_pipes(t_command *cmds, char **envp)
 // {
 // 	int pipe_fds[2];
 // 	int fd_in;
@@ -860,7 +860,7 @@ void no_pipes(Token *cmds, char **envp)
 // 	restore_fds(pipe_fds);
 // }
 
-void after_receiving_cmds(Token *cmds, char **envp)
+void after_receiving_cmds(t_command *cmds, char **envp)
 {
 	// if (there_is_pipes(cmds))
 	//	 with_pipes(cmds, envp);
@@ -872,11 +872,11 @@ void after_receiving_cmds(Token *cmds, char **envp)
 // {
 // 	// char *path;
 // 	// char *input;
-// 	Token *cmds;
+// 	t_command *cmds;
 // 	char **my_env;
 // 	(void)ac; (void)av;
 // 	my_env = ft_array_strdup(envp);
-// 		cmds = calloc(1, sizeof(struct Token));
+// 		cmds = calloc(1, sizeof(struct t_command));
 // 	cmds->pipe_to_next_token = 0;
 // 	cmds->to_execute = malloc(sizeof(char *) * 8);
 // 	cmds->to_execute[0] = ft_strdup("cat");
@@ -890,7 +890,7 @@ void after_receiving_cmds(Token *cmds, char **envp)
 // 	cmds->append = 1;
 // 	cmds->input_file = NULL;
 // 	cmds->output_file = "asd.txt";
-// 	// cmds->next = calloc(1, sizeof(struct Token));
+// 	// cmds->next = calloc(1, sizeof(struct t_command));
 // 	// cmds->next->to_execute = malloc(sizeof (char *) * 3);
 // 	// cmds->next->to_execute[0] = ft_strdup("grep");
 // 	// cmds->next->to_execute[1] = ft_strdup("hel");
@@ -912,7 +912,7 @@ void after_receiving_cmds(Token *cmds, char **envp)
 // {
 // 	char *path;
 // 	char *input;
-// 	Token *cmds;
+// 	t_command *cmds;
 // 	char **my_env;
 //
 // 	my_env = copy_env(envp);
