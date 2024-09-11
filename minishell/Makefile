@@ -49,8 +49,8 @@ BOLD        = \033[1m
 
 all: $(LIBFT) $(NAME)
 	# @printf "\n $(CYN)Generating $(NAME) executable...$(WTH)\n"
-	@$(SHOW_PROGRESS)
-	# @$(SHOW_LIBFT_PROGRESS)
+	# @$(SHOW_PROGRESS)
+	# # @$(SHOW_LIBFT_PROGRESS)
 	@printf "\n$(GRN)$(NAME) executable ready!$(WTH)\n\n"
 
 $(NAME): $(OBJ)
@@ -69,7 +69,7 @@ $(BUILD_DIR)%.o: $(SRCDIR)%.c | mkbuilddir
 
 $(LIBFT):
 	@printf "\n$(CYN)Generating Libft...$(WTH)\n"
-	@$(SHOW_LIBFT_PROGRESS)
+	# @$(SHOW_LIBFT_PROGRESS)
 	@make --no-print-directory -C $(LFT_PATH)
 	@printf "$(GRN)Libft created!$(WTH)\n\n"
 

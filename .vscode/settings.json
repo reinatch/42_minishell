@@ -1,10 +1,19 @@
 {
     "files.associations": {
+        "*.tsx": "typescriptreact",
+        "*.php": "php",
+        "*.css": "css",
+        "*.js": "javascript",
         "minishell.h": "c",
         "*.tcc": "c",
         "compare": "c",
         "limits": "c",
         "structs.h": "c",
-        "readline.h": "c"
+        "readline.h": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
     }
 }
