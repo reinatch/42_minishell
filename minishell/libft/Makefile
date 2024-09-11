@@ -71,3 +71,5 @@ re: fclean all
 
 
 .PHONY: all clean fclean re leaks
+
+.SILENT:

@@ -22,11 +22,11 @@
         },
   
         {
-            "name": "(gdb) Launch",
+            "name": "parser",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/home/rei/42_minishell/RESOURCES/4209-minishell/minishell",
-            "args": [],
+            "program": "/home/rei/42_minishell/minishell/minishell",
+            "args": ["ls", "-l"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
